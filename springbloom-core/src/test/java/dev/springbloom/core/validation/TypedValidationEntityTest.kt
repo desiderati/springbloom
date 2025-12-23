@@ -106,9 +106,9 @@ class TypedValidationEntityTest :
             it("estão inválidos") {
                 assertThat(`invalid book`,
                     hasExactValidationErrors(
-                        "BlankBookTitle",
-                        "Authors[0]BlankAuthorName",
-                        "Authors[0]Addresses[0]BlankFullAddress"
+                        "Book.BlankBookTitle",
+                        "Book.Authors[0]BlankAuthorName",
+                        "Book.Authors[0]Addresses[0]BlankFullAddress"
                     )
                 )
             }
@@ -121,9 +121,9 @@ class TypedValidationEntityTest :
             it("estão inválidos") {
                 assertThat(`invalid book  with validation on constructor`,
                     hasExactErrors(
-                        "BlankBookTitle",
-                        "Authors[0]BlankAuthorName",
-                        "Authors[0]Addresses[0]BlankFullAddress"
+                        "Book.BlankBookTitle",
+                        "Book.Authors[0]BlankAuthorName",
+                        "Book.Authors[0]Addresses[0]BlankFullAddress"
                     )
                 )
             }
@@ -134,21 +134,23 @@ data class Address(
     private val name: String = "Default Address",
     private val fullAddress: String
 ) : TypedValidationEntity {
-    override fun isValid(): Either<TypedValidationException, Unit> = ensureOnce {
-        isValidOnce(fullAddress.isNotBlank()) { "BlankFullAddress" }
-    }
+    override fun isValid(): Either<TypedValidationException, Unit> =
+        ensureOnce {
+            isValidOnce(fullAddress.isNotBlank()) { "BlankFullAddress" }
+        }
 }
 
 data class Author(
     val name: String,
     val addresses: Set<Address>
 ) : TypedValidationEntity {
-    override fun isValid(): Either<TypedValidationException, Unit> = ensure {
-        all(
-            { isValid(name.isNotBlank()) { "BlankAuthorName" } },
-            { isValid(addresses) { "Addresses" } }
-        )
-    }
+    override fun isValid(): Either<TypedValidationException, Unit> =
+        ensure {
+            all(
+                { isValid(name.isNotBlank()) { "BlankAuthorName" } },
+                { isValid(addresses) { "Addresses" } }
+            )
+        }
 }
 
 // This is more appropriate for classes with immutable properties.
@@ -161,13 +163,14 @@ class AuthorWithValidationOnConstructor private constructor(
         operator fun invoke(
             name: String,
             addresses: Set<Address>
-        ): Either<TypedValidationException, AuthorWithValidationOnConstructor> = either {
-            ensure(all(
-                { isValid(name.isNotBlank()) { "BlankAuthorName" } },
-                { isValid(addresses) { "Addresses" } }
-            ))
-            AuthorWithValidationOnConstructor(name, addresses)
-        }
+        ): Either<TypedValidationException, AuthorWithValidationOnConstructor> =
+            either {
+                ensure(all(
+                    { isValid(name.isNotBlank()) { "BlankAuthorName" } },
+                    { isValid(addresses) { "Addresses" } }
+                ))
+                AuthorWithValidationOnConstructor(name, addresses)
+            }
     }
 }
 
@@ -175,13 +178,14 @@ data class Book(
     val title: String,
     val authors: Set<Author>
 ) : TypedValidationEntity {
-    override fun isValid(): Either<TypedValidationException, Unit> = ensure {
-        all(
-            { isValid(title.isNotBlank()) { "BlankBookTitle" } },
-            { isValid(authors.isNotEmpty()) { "EmptyAuthorsList" } },
-            { isValid(authors) { "Authors" } }
-        )
-    }
+    override fun isValid(): Either<TypedValidationException, Unit> =
+        ensure("Book") {
+            all(
+                { isValid(title.isNotBlank()) { "BlankBookTitle" } },
+                { isValid(authors.isNotEmpty()) { "EmptyAuthorsList" } },
+                { isValid(authors) { "Authors" } }
+            )
+        }
 }
 
 @Suppress("unused")
@@ -193,13 +197,14 @@ class BookWithValidationOnConstructor private constructor(
         operator fun invoke(
             title: String,
             authors: Set<Author>
-        ): Either<TypedValidationException, BookWithValidationOnConstructor> = either {
-            ensure(all(
-                { isValid(title.isNotBlank()) { "BlankBookTitle" } },
-                { isValid(authors.isNotEmpty()) { "EmptyAuthorsList" } },
-                { isValid(authors) { "Authors" } }
-            ))
-            BookWithValidationOnConstructor(title, authors)
-        }
+        ): Either<TypedValidationException, BookWithValidationOnConstructor> =
+            either {
+                ensure("Book", all(
+                    { isValid(title.isNotBlank()) { "BlankBookTitle" } },
+                    { isValid(authors.isNotEmpty()) { "EmptyAuthorsList" } },
+                    { isValid(authors) { "Authors" } }
+                ))
+                BookWithValidationOnConstructor(title, authors)
+            }
     }
 }

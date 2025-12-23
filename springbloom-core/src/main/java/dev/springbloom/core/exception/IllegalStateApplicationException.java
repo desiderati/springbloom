@@ -19,7 +19,6 @@
 package dev.springbloom.core.exception;
 
 import java.io.Serial;
-import java.io.Serializable;
 
 /**
  * We do not use the {@link IllegalStateException} class as it does not accept internationalized messages.
@@ -34,7 +33,7 @@ public class IllegalStateApplicationException extends ApplicationException {
         super(message);
     }
 
-    public IllegalStateApplicationException(String message, Serializable... args) {
+    public IllegalStateApplicationException(String message, Object... args) {
         super(message, args);
     }
 
@@ -42,7 +41,7 @@ public class IllegalStateApplicationException extends ApplicationException {
         super(message, cause);
     }
 
-    public IllegalStateApplicationException(String message, Throwable cause, Serializable... args) {
+    public IllegalStateApplicationException(String message, Throwable cause, Object... args) {
         super(message, cause, args);
     }
 }

@@ -21,7 +21,6 @@ package dev.springbloom.core.exception;
 import lombok.Getter;
 
 import java.io.Serial;
-import java.io.Serializable;
 
 @Getter
 public class ApplicationException extends RuntimeException {
@@ -30,13 +29,13 @@ public class ApplicationException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     @SuppressWarnings("squid:S1165")
-    private Serializable[] args = null;
+    private Object[] args = null;
 
     public ApplicationException(String message) {
         super(message);
     }
 
-    public ApplicationException(String message, Serializable... args) {
+    public ApplicationException(String message, Object... args) {
         super(message);
         this.args = args;
     }
@@ -45,7 +44,7 @@ public class ApplicationException extends RuntimeException {
         super(message, cause);
     }
 
-    public ApplicationException(String message, Throwable cause, Serializable... args) {
+    public ApplicationException(String message, Throwable cause, Object... args) {
         super(message, cause);
         this.args = args;
     }

@@ -22,6 +22,7 @@ import dev.springbloom.core.exception.ApplicationException
 
 @Suppress("unused")
 class TypedValidationException(
+    private val prefix: String = "",
     override val message: String,
     val typedValidationErrors: MutableList<TypedValidationError>
 ) : ApplicationException(message) {
@@ -30,14 +31,25 @@ class TypedValidationException(
         private const val ERROR_MESSAGE = "An error occurred while evaluating a typed validation entity"
     }
 
-    constructor() : this(ERROR_MESSAGE, mutableListOf())
+    constructor(
+        prefix: String = ""
+    ) : this(prefix, ERROR_MESSAGE, mutableListOf())
 
-    constructor(typedValidationError: TypedValidationError) : this(ERROR_MESSAGE, mutableListOf(typedValidationError))
+    constructor(
+        prefix: String = "",
+        typedValidationError: TypedValidationError
+    ) : this(prefix, ERROR_MESSAGE, mutableListOf(typedValidationError))
 
-    constructor(typedValidationErrors: MutableList<TypedValidationError>) : this(ERROR_MESSAGE, typedValidationErrors)
+    constructor(
+        prefix: String = "",
+        typedValidationErrors: MutableList<TypedValidationError>
+    ) : this(prefix, ERROR_MESSAGE, typedValidationErrors)
 
     override fun toString(): String {
-        return StringBuilder().append(message)
+        val result =
+            if (prefix.isNotBlank()) StringBuilder().append(prefix).append(".") else StringBuilder()
+
+        return result.append(message)
             .append(
                 typedValidationErrors.joinToString(", ", ":[", "]") { error -> error.errorMessage }
             ).toString()

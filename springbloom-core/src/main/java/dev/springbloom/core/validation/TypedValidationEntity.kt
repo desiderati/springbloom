@@ -50,11 +50,21 @@ fun <L, R> Either<L, R>.rightOrNull(): R? {
 @RaiseDSL
 inline fun ensureOnce(
     block: TypedValidationException.() -> (TypedValidationException.() -> List<TypedValidationError>?)
+): Either<TypedValidationException, Unit> = ensureOnce("", block)
+
+
+@RaiseDSL
+inline fun ensureOnce(
+    prefix: String,
+    block: TypedValidationException.() -> (TypedValidationException.() -> List<TypedValidationError>?)
 ): Either<TypedValidationException, Unit> {
     contract { callsInPlace(block, AT_MOST_ONCE) }
     return fold({
-        val ex = TypedValidationException()
-        val typedErrors = block(ex)(ex)?.toSet() ?: setOf()
+        val ex = TypedValidationException(prefix)
+        val typedErrors = block(ex).let {
+            it(ex)?.toSet() ?: setOf()
+        }
+
         if (typedErrors.isNotEmpty()) {
             ex.typedValidationErrors.addAll(typedErrors)
             raise(ex)
@@ -66,11 +76,22 @@ inline fun ensureOnce(
 @RaiseDSL
 fun ensure(
     block: TypedValidationException.() -> (List<TypedValidationException.() -> List<TypedValidationError>?>)
+): Either<TypedValidationException, Unit> = ensure("", block)
+
+
+@RaiseDSL
+fun ensure(
+    prefix: String,
+    block: TypedValidationException.() -> (List<TypedValidationException.() -> List<TypedValidationError>?>)
 ): Either<TypedValidationException, Unit> {
     contract { callsInPlace(block, AT_MOST_ONCE) }
     return fold({
-        val ex = TypedValidationException()
-        val typedErrors = block(ex).mapNotNull { action -> action(ex) }.flatten().toSet()
+        val ex = TypedValidationException(prefix)
+        val typedErrors =
+            block(ex).mapNotNull {
+                it(ex)
+            }.flatten().toSet()
+
         if (typedErrors.isNotEmpty()) {
             ex.typedValidationErrors.addAll(typedErrors)
             raise(ex)
@@ -82,9 +103,19 @@ fun ensure(
 @RaiseDSL
 fun Raise<TypedValidationException>.ensure(
     actions: List<TypedValidationException.() -> List<TypedValidationError>?>
+) = ensure("", actions)
+
+@RaiseDSL
+fun Raise<TypedValidationException>.ensure(
+    prefix: String,
+    actions: List<TypedValidationException.() -> List<TypedValidationError>?>
 ) {
-    val ex = TypedValidationException()
-    val errors = actions.mapNotNull { action -> action(ex) }.flatten().toSet()
+    val ex = TypedValidationException(prefix)
+    val errors =
+        actions.mapNotNull {
+            it(ex)
+        }.flatten().toSet()
+
     if (errors.isNotEmpty()) {
         ex.typedValidationErrors.addAll(errors)
         raise(ex)
@@ -105,7 +136,9 @@ fun TypedValidationException.all(
 fun Raise<TypedValidationException>.allThese(
     vararg elements: List<TypedValidationException.() -> List<TypedValidationError>?>
 ): MutableList<TypedValidationException.() -> List<TypedValidationError>?> {
-    val mutableList = mutableListOf<TypedValidationException.() -> List<TypedValidationError>?>()
+    val mutableList =
+        mutableListOf<TypedValidationException.() -> List<TypedValidationError>?>()
+
     elements.forEach { mutableList.addAll(it) }
     return mutableList
 }
@@ -114,7 +147,9 @@ fun Raise<TypedValidationException>.allThese(
 fun TypedValidationException.allThese(
     vararg elements: List<TypedValidationException.() -> List<TypedValidationError>?>
 ): MutableList<TypedValidationException.() -> List<TypedValidationError>?> {
-    val mutableList = mutableListOf<TypedValidationException.() -> List<TypedValidationError>?>()
+    val mutableList =
+        mutableListOf<TypedValidationException.() -> List<TypedValidationError>?>()
+
     elements.forEach { mutableList.addAll(it) }
     return mutableList
 }
@@ -179,7 +214,9 @@ inline fun <Entity : TypedValidationEntity?> TypedValidationException.isValid(
     crossinline prefix: () -> String = { "" }
 ): List<TypedValidationError>? {
     return entity?.isValid()?.fold(
-        ifLeft = { left -> left.typedValidationErrors.map { "${prefix()}:${it.errorMessage}" } },
+        ifLeft = { left ->
+            left.typedValidationErrors.map { "${prefix()}:${it.errorMessage}" }
+        },
         ifRight = { null }
     )?.map {
         TypedValidationError(it)
@@ -201,7 +238,9 @@ inline fun TypedValidationException.isValid(
 ): List<TypedValidationError>? {
     return validationEntities.mapIndexed { index, entity ->
         entity.isValid().fold(
-            ifLeft = { left -> left.typedValidationErrors.map { "${prefix()}[$index]${it.errorMessage}" } },
+            ifLeft = { left ->
+                left.typedValidationErrors.map { "${prefix()}[$index]${it.errorMessage}" }
+            },
             ifRight = { null }
         )
     }.firstOrNull()?.map {

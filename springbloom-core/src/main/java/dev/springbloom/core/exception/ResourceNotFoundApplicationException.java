@@ -19,7 +19,6 @@
 package dev.springbloom.core.exception;
 
 import java.io.Serial;
-import java.io.Serializable;
 
 @SuppressWarnings("unused")
 public class ResourceNotFoundApplicationException extends ApplicationException {
@@ -31,7 +30,7 @@ public class ResourceNotFoundApplicationException extends ApplicationException {
         super(message);
     }
 
-    public ResourceNotFoundApplicationException(String message, Serializable... args) {
+    public ResourceNotFoundApplicationException(String message, Object... args) {
         super(message, args);
     }
 
@@ -39,7 +38,7 @@ public class ResourceNotFoundApplicationException extends ApplicationException {
         super(message, cause);
     }
 
-    public ResourceNotFoundApplicationException(String message, Throwable cause, Serializable... args) {
+    public ResourceNotFoundApplicationException(String message, Throwable cause, Object... args) {
         super(message, cause, args);
     }
 }

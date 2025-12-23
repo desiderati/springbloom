@@ -19,7 +19,6 @@
 package dev.springbloom.core.exception;
 
 import java.io.Serial;
-import java.io.Serializable;
 
 @SuppressWarnings("unused")
 public class SecurityApplicationException extends ApplicationException {
@@ -31,7 +30,7 @@ public class SecurityApplicationException extends ApplicationException {
         super(message);
     }
 
-    public SecurityApplicationException(String message, Serializable... args) {
+    public SecurityApplicationException(String message, Object... args) {
         super(message, args);
     }
 
@@ -39,7 +38,7 @@ public class SecurityApplicationException extends ApplicationException {
         super(message, cause);
     }
 
-    public SecurityApplicationException(String message, Throwable cause, Serializable... args) {
+    public SecurityApplicationException(String message, Throwable cause, Object... args) {
         super(message, cause, args);
     }
 }

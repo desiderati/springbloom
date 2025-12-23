@@ -23,10 +23,11 @@ import arrow.core.Either
 @Suppress("unused")
 data class TypedValidationTestObject(val name: String) : TypedValidationEntity {
 
-    override fun isValid(): Either<TypedValidationException, Unit> = ensure {
-        all(
-            { isValid(name == "Test") { "invalidName" } },
-            { isValid(name.length == 4) { "invalidNameLength" } }
-        )
-    }
+    override fun isValid(): Either<TypedValidationException, Unit> =
+        ensure("TypedValidationTestObject") {
+            all(
+                { isValid(name == "Test") { "invalidName" } },
+                { isValid(name.length == 4) { "invalidNameLength" } }
+            )
+        }
 }
