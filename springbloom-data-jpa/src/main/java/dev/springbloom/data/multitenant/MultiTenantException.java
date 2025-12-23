@@ -16,14 +16,20 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.data.multitenant
+package dev.springbloom.data.multitenant;
 
-interface MultiTenantSupport {
+@SuppressWarnings("unused")
+public class MultiTenantException extends RuntimeException {
 
-    companion object {
-        const val TENANT: String = "tenant"
+    public MultiTenantException() {
+        super();
     }
 
-    fun getTenant(): String
+    public MultiTenantException(String message) {
+        super(message);
+    }
 
+    public MultiTenantException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

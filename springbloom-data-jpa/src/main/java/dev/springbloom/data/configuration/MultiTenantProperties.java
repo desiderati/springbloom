@@ -16,8 +16,9 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.data.multitenant.configuration;
+package dev.springbloom.data.configuration;
 
+import dev.springbloom.data.multitenant.context.MultiTenantContextHolder;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,14 +30,36 @@ import org.springframework.validation.annotation.Validated;
 @Setter
 @Validated
 @Component
-@ConfigurationProperties("app.database.multitenant")
+@ConfigurationProperties("spring.datasource.multitenant")
 public class MultiTenantProperties {
 
-    public enum Strategy {
-        NONE, SCHEMA /*, DATABASE, IDENTIFIER */ // Not supported yet!
+    public enum Type {
+        NONE, SCHEMA /*, DATABASE, IDENTIFIER??? */ // Not supported yet!
+    }
+
+    @Getter
+    @Setter
+    public static class Schema {
+
+        private String defaultSchema;
+        private String ddlCreate;
+
+        public void setDefault(String defaultSchema) {
+            this.defaultSchema = defaultSchema;
+        }
     }
 
     @NotNull
-    private Strategy strategy = Strategy.NONE;
+    private Type strategy = Type.NONE;
 
+    private String contextHolderStrategyName = MultiTenantContextHolder.MODE_THREAD_LOCAL;
+
+    private Schema schema = new Schema();
+
+    public String getDefaultTenantId() {
+        return switch (strategy) {
+            case SCHEMA -> schema.getDefaultSchema();
+            case NONE -> "";
+        };
+    }
 }

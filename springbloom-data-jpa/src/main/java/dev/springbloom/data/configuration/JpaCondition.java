@@ -16,14 +16,19 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.web.security.auth.oauth2
+package dev.springbloom.data.configuration;
 
-import org.springframework.security.core.GrantedAuthority
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User
+import org.springframework.boot.autoconfigure.condition.AllNestedConditions;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.orm.jpa.AbstractEntityManagerFactoryBean;
 
-class OAuth2User(
-    val authorizationHeader: String,
-    authorities: MutableCollection<out GrantedAuthority>,
-    attributes: MutableMap<String, Any>,
-    nameAttributeKey: String
-) : DefaultOAuth2User(authorities, attributes, nameAttributeKey)
+public class JpaCondition extends AllNestedConditions {
+
+    JpaCondition() {
+        super(ConfigurationPhase.REGISTER_BEAN);
+    }
+
+    @ConditionalOnBean(AbstractEntityManagerFactoryBean.class)
+    static class HasJpaEnabled {
+    }
+}

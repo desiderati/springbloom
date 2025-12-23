@@ -26,7 +26,7 @@ import org.hibernate.service.spi.Stoppable;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
@@ -39,7 +39,7 @@ import java.sql.SQLException;
  */
 @Component
 @ConditionalOnClass(HikariDataSource.class)
-@ConditionalOnProperty(name = "app.database.multitenant.strategy", havingValue = "schema")
+@ConditionalOnExpression("!'${spring.datasource.multitenant.type:NONE}'.equalsIgnoreCase('NONE')")
 public class HikariDatasourceConnectionProvider implements ConnectionProvider, Stoppable {
 
     private final transient HikariDataSource dataSource;

@@ -16,7 +16,7 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.data.jpa.configuration;
+package dev.springbloom.data.configuration;
 
 import org.springframework.context.annotation.Conditional;
 import org.springframework.core.Ordered;
@@ -30,7 +30,7 @@ import java.lang.annotation.*;
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Conditional(OnJpaCondition.class)
+@Conditional(JpaCondition.class)
 @Order(Ordered.LOWEST_PRECEDENCE - 1)
 public @interface ConditionalOnJpa {
 

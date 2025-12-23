@@ -16,19 +16,26 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.data.jpa.configuration;
+package dev.springbloom.data.configuration;
 
-import org.springframework.boot.autoconfigure.condition.AllNestedConditions;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.orm.jpa.AbstractEntityManagerFactoryBean;
+import dev.springbloom.core.configuration.DefaultAutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter;
+import org.springframework.context.annotation.*;
 
-public class OnJpaCondition extends AllNestedConditions {
+@Configuration(proxyBeanMethods = false)
+@PropertySource("classpath:application-springbloom-data-jpa.properties")
 
-    OnJpaCondition() {
-        super(ConfigurationPhase.REGISTER_BEAN);
-    }
+// Do not use this annotation in an auto-configuration file.
+//@EnableJpaRepositories
 
-    @ConditionalOnBean(AbstractEntityManagerFactoryBean.class)
-    static class HasJpaEnabled {
-    }
+@ComponentScan(basePackages = "dev.springbloom.data.jpa",
+    // Do not add the auto-configured classes, otherwise the auto-configuration will not work as expected.
+    excludeFilters = @ComponentScan.Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class)
+)
+@Import({
+    // Need to be auto-loaded too.
+    DefaultAutoConfiguration.class
+})
+public class JpaAutoConfiguration {
+
 }

@@ -16,16 +16,41 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.data.multitenant;
+package dev.springbloom.data.multitenant.context;
 
-import java.util.Set;
+import org.springframework.util.Assert;
 
 /**
- * Identifies which schemas (Tenants) will be updated with the Liquibase rules at application startup.
- * It is not mandatory to implement it; however, it is highly recommended.
+ * A <code>static</code> field-based implementation of {@link MultiTenantContextHolderStrategy}.
+ * <p>
+ * This means that all instances in the JVM share the same <code>MultiTenantContext</code>.
+ * This is generally useful with rich clients, such as Swing.
  */
-public interface LiquibaseSchemaRetriever {
+final class GlobalMultiTenantContextHolderStrategy implements MultiTenantContextHolderStrategy {
 
-    Set<String> schemas();
+    private static MultiTenantContext multiTenantContext;
 
+    @Override
+    public void clearContext() {
+        multiTenantContext = null;
+    }
+
+    @Override
+    public MultiTenantContext getContext() {
+        if (multiTenantContext == null) {
+            multiTenantContext = new MultiTenantContext();
+        }
+        return multiTenantContext;
+    }
+
+    @Override
+    public void setContext(MultiTenantContext context) {
+        Assert.notNull(context, "Only non-null MultiTenantContext instances are allowed!");
+        multiTenantContext = context;
+    }
+
+    @Override
+    public MultiTenantContext createEmptyContext() {
+        return new MultiTenantContext();
+    }
 }

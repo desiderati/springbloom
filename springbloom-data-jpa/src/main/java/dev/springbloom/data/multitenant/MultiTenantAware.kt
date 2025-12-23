@@ -16,29 +16,14 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.data.jpa.configuration;
+package dev.springbloom.data.multitenant
 
-import dev.springbloom.core.configuration.DefaultAutoConfiguration;
-import dev.springbloom.data.DatabaseProperties;
-import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.*;
+interface MultiTenantAware {
 
-@Configuration(proxyBeanMethods = false)
-@PropertySource("classpath:application-springbloom-data-jpa.properties")
+    companion object {
+        const val TENANT: String = "tenant"
+    }
 
-// Do not use this annotation in an auto-configuration file.
-//@EnableJpaRepositories
-
-@ComponentScan(basePackages = "dev.springbloom.data.jpa",
-    // Do not add the auto-configured classes, otherwise the auto-configuration will not work as expected.
-    excludeFilters = @ComponentScan.Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class)
-)
-@EnableConfigurationProperties(DatabaseProperties.class)
-@Import({
-    // Need to be auto-loaded too.
-    DefaultAutoConfiguration.class
-})
-public class JpaAutoConfiguration {
+    fun getTenant(): String
 
 }

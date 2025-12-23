@@ -18,21 +18,33 @@
  */
 package dev.springbloom.data.multitenant;
 
+import dev.springbloom.data.configuration.MultiTenantProperties;
+import dev.springbloom.data.multitenant.context.MultiTenantContextHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.DependsOn;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@DependsOn("multiTenantContext")
-@ConditionalOnProperty(name = "app.database.multitenant.strategy", havingValue = "schema")
+@ConditionalOnExpression("!'${spring.datasource.multitenant.type:NONE}'.equalsIgnoreCase('NONE')")
 public class MultiTenantIdentifierResolver implements CurrentTenantIdentifierResolver<String> {
+
+
+    private final MultiTenantProperties multiTenantProperties;
+
+    public MultiTenantIdentifierResolver(MultiTenantProperties multiTenantProperties) {
+        this.multiTenantProperties = multiTenantProperties;
+    }
 
     @Override
     public String resolveCurrentTenantIdentifier() {
-        return MultiTenantContext.getId();
+        String tenantId = MultiTenantContextHolder.getContext().getTenantId();
+        if (tenantId == null) {
+            tenantId = multiTenantProperties.getDefaultTenantId();
+            log.warn("Tenant identifier was not configured! Falling back to default tenant identifier: {}", tenantId);
+        }
+        return tenantId;
     }
 
     @Override

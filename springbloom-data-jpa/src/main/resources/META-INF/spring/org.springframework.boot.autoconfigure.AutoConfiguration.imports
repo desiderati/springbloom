@@ -17,6 +17,5 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-dev.springbloom.data.jpa.configuration.JpaAutoConfiguration
-dev.springbloom.data.multitenant.configuration.MultiTenantAutoConfiguration
-dev.springbloom.data.multitenant.configuration.MultiTenantLiquibaseAutoConfiguration
+dev.springbloom.data.configuration.JpaAutoConfiguration
+dev.springbloom.data.configuration.MultiTenantAutoConfiguration

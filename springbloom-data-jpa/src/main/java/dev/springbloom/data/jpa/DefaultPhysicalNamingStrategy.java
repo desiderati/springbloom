@@ -45,7 +45,7 @@ public class DefaultPhysicalNamingStrategy extends CamelCaseToUnderscoresNamingS
     public DefaultPhysicalNamingStrategy() {
         prefix = getTablePrefix();
         if (prefix == null) {
-            log.info("Property 'app.database.config.table-prefix' not configured! Ignoring table prefix...");
+            log.info("Property 'spring.datasource.table-prefix' not configured! Ignoring table prefix...");
         }
     }
 
@@ -60,7 +60,7 @@ public class DefaultPhysicalNamingStrategy extends CamelCaseToUnderscoresNamingS
             for (Resource resource : resources) {
                 InputStream is = resource.getInputStream();
                 prop.load(is);
-                String prefixTmp = prop.getProperty("app.database.config.table-prefix");
+                String prefixTmp = prop.getProperty("spring.datasource.table-prefix");
                 if (StringUtils.isNotBlank(prefixTmp)) {
                     return prefixTmp;
                 }
@@ -68,7 +68,7 @@ public class DefaultPhysicalNamingStrategy extends CamelCaseToUnderscoresNamingS
             return null;
         } catch (Exception ex) {
             String errorMsg =
-                "It wasn't possible to load property 'app.database.config.table-prefix' from file: application.properties";
+                "It wasn't possible to load property 'spring.datasource.table-prefix' from file: application.properties";
             log.info(errorMsg);
             log.debug(errorMsg, ex);
             return null;

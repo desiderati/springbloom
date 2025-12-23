@@ -1,43 +1,39 @@
 {
   "groups": [
     {
-      "name": "app.database.config",
-      "type": "dev.springbloom.data.DatabaseProperties"
-    },
-    {
-      "name": "app.database.multitenant",
-      "type": "dev.springbloom.data.multitenant.configuration.MultiTenantProperties"
+      "name": "spring.datasource.multitenant",
+      "type": "dev.springbloom.data.configuration.MultiTenantProperties"
     }
   ],
   "properties": [
     {
-      "name": "app.database.config.table-prefix",
+      "name": "spring.datasource.table-prefix",
       "description": "The prefix to be used by all system tables.",
       "type": "java.lang.String"
     },
     {
-      "name": "app.database.config.ddl-create-schema",
-      "description": "The DDL for schema creation.",
-      "type": "java.lang.String",
-      "defaultValue": "CREATE SCHEMA IF NOT EXISTS ${schemaName}"
+      "name": "spring.datasource.multitenant.type",
+      "description": "It defines the multi-tenant type.",
+      "type": "dev.springbloom.data.configuration.MultiTenantProperties$Type",
+      "defaultValue": "NONE"
     },
     {
-      "name": "app.database.config.ddl-change-schema",
-      "description": "The DDL for schema change.",
+      "name": "spring.datasource.multitenant.context-holder-strategy-name",
+      "description": "It defines the multi-tenant context holder strategy name.",
       "type": "java.lang.String",
-      "defaultValue": "SET SCHEMA ''${schemaName}''"
+      "defaultValue": "MODE_THREAD_LOCAL"
     },
     {
-      "name": "app.database.multitenant.default-tenant",
-      "description": "Default Tenant.",
+      "name": "spring.datasource.multitenant.schema.default",
+      "description": "The default schema to be used during application bootstrap.",
       "type": "java.lang.String",
       "defaultValue": "public"
     },
     {
-      "name": "app.database.multitenant.strategy",
-      "description": "Multi Tenant Strategy.",
-      "type": "dev.springbloom.data.multitenant.configuration.MultiTenantProperties$Strategy",
-      "defaultValue": "NONE"
+      "name": "spring.datasource.multitenant.schema.ddl-create",
+      "description": "The DDL for schema creation.",
+      "type": "java.lang.String",
+      "defaultValue": "CREATE SCHEMA IF NOT EXISTS ${schemaName}"
     }
   ]
 }

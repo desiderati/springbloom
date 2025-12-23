@@ -16,44 +16,46 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.data;
+package dev.springbloom.data.multitenant.schema;
 
+import liquibase.exception.LiquibaseException;
+import liquibase.integration.spring.SpringLiquibase;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.text.StringSubstitutor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Slf4j
 @Service
-@ConditionalOnBean(JdbcTemplate.class)
-public class DatabaseService {
+@ConditionalOnBean(MultiTenantSchemaConnectionProvider.class)
+@ConditionalOnProperty(name = "spring.liquibase.enabled", havingValue = "true")
+public class MultiTenantSchemaLiquibaseUpdater {
 
-    private final DatabaseProperties databaseProperties;
-
-    private final JdbcTemplate jdbcTemplate;
+    private final SpringLiquibase liquibase;
 
     @Autowired
-    public DatabaseService(DatabaseProperties databaseProperties, JdbcTemplate jdbcTemplate) {
-        this.databaseProperties = databaseProperties;
-        this.jdbcTemplate = jdbcTemplate;
+    public MultiTenantSchemaLiquibaseUpdater(SpringLiquibase liquibase) {
+        this.liquibase = liquibase;
     }
 
-    @SuppressWarnings("unused")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public void createSchema(String name) {
-        Map<String, String> values = new HashMap<>();
-        values.put("schemaName", name);
-        log.info("Creating schema: {}", name);
+    @SneakyThrows
+    public void update(@NonNull String schema) {
+        schema = StringUtils.trim(schema);
+        if (StringUtils.isBlank(schema)) {
+            throw new IllegalArgumentException("Schema cannot be empty!");
+        }
 
-        StringSubstitutor strSubstitutor = new StringSubstitutor(values);
-        String createQuery = strSubstitutor.replace(databaseProperties.getDdlCreateSchema());
-        jdbcTemplate.execute(createQuery);
+        log.info("Applying changes for schema: {}", schema);
+        liquibase.setDefaultSchema(schema);
+
+        try {
+            liquibase.afterPropertiesSet();
+        } catch (LiquibaseException e) {
+            throw new LiquibaseException("Error while running Liquibase for schema: " + schema, e);
+        }
     }
 }

@@ -16,46 +16,20 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.data.multitenant;
+package dev.springbloom.data.multitenant.context;
 
-import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 /**
  * Class responsible for storing the client identifier (Tenant).
  */
-@Slf4j
-@Component
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class MultiTenantContext {
 
-    private static final ThreadLocal<String> currentTenantId = new ThreadLocal<>();
-    private static String defaultTenant;
+    private String tenantId;
 
-    @Autowired
-    @SuppressWarnings("squid:S3010")
-    // We may ignore the error because it will have only one instance by application context.
-    public MultiTenantContext(@Value("${app.database.multitenant.default-tenant:public}") String defaultTenant) {
-        MultiTenantContext.defaultTenant = defaultTenant;
-    }
-
-    public static void set(String tenant) {
-        log.debug("Setting tenant: {}", tenant);
-        currentTenantId.set(tenant);
-    }
-
-    public static String getId() {
-        if (currentTenantId.get() == null) {
-            return defaultTenant;
-        }
-        return currentTenantId.get();
-    }
-
-    public static void clear() {
-        currentTenantId.remove();
-    }
 }

@@ -16,26 +16,20 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.data;
+package dev.springbloom.data.configuration;
 
-import jakarta.validation.constraints.NotBlank;
-import lombok.Getter;
-import lombok.Setter;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
-import org.springframework.validation.annotation.Validated;
+import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
 
-@Getter
-@Setter
-@Validated
-@Component
-@ConfigurationProperties("app.database.config")
-public class DatabaseProperties {
-
-    @NotBlank
-    private String ddlCreateSchema = "CREATE SCHEMA IF NOT EXISTS ${schemaName}";
-
-    @NotBlank
-    private String ddlChangeSchema = "USE ${schemaName}";
-
+/**
+ * It was created to avoid circular injections.
+ */
+@Configuration(proxyBeanMethods = false)
+@ComponentScan(basePackages = "dev.springbloom.data.multitenant",
+    // Do not add the auto-configured classes, otherwise the auto-configuration will not work as expected.
+    excludeFilters = @ComponentScan.Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class)
+)
+public class MultiTenantComponentConfiguration {
 }

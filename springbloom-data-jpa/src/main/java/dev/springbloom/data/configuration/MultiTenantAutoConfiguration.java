@@ -16,13 +16,15 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.data.multitenant.configuration;
+package dev.springbloom.data.configuration;
 
-import dev.springbloom.data.multitenant.MultiTenantConnectionProvider;
+import dev.springbloom.data.multitenant.context.MultiTenantContextHolder;
+import dev.springbloom.data.multitenant.schema.MultiTenantSchemaConnectionProvider;
 import dev.springbloom.data.multitenant.MultiTenantIdentifierResolver;
 import org.hibernate.cfg.AvailableSettings;
-import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
@@ -30,9 +32,8 @@ import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfigurat
 import org.springframework.boot.autoconfigure.orm.jpa.HibernatePropertiesCustomizer;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.FilterType;
+import org.springframework.context.annotation.Import;
 
 @Configuration(proxyBeanMethods = false)
 @AutoConfigureBefore({
@@ -41,24 +42,34 @@ import org.springframework.context.annotation.FilterType;
     LiquibaseAutoConfiguration.class
 })
 @EnableConfigurationProperties(MultiTenantProperties.class)
-@ConditionalOnProperty(name = "app.database.multitenant.strategy", havingValue = "schema")
-@ComponentScan(basePackages = "dev.springbloom.data.multitenant",
-    // Do not add the auto-configured classes, otherwise the auto-configuration will not work as expected.
-    excludeFilters = @ComponentScan.Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class)
-)
+@ConditionalOnExpression("!'${spring.datasource.multitenant.type:NONE}'.equalsIgnoreCase('NONE')")
+@Import(MultiTenantComponentConfiguration.class)
 public class MultiTenantAutoConfiguration {
+
+    @Autowired
+    public MultiTenantAutoConfiguration(MultiTenantProperties multiTenantProperties) {
+        MultiTenantContextHolder.setStrategyName(multiTenantProperties.getContextHolderStrategyName());
+
+        // This will be valid only during application bootstrap.
+        MultiTenantContextHolder.getContext().setTenantId(multiTenantProperties.getDefaultTenantId());
+    }
 
     /**
      * Customize the Hibernate properties before it is used by an auto-configured class.
      */
     @Bean
+    @ConditionalOnProperty(name = "spring.datasource.multitenant.type", havingValue = "schema")
     public HibernatePropertiesCustomizer hibernatePropertiesCustomizer(
-        MultiTenantConnectionProvider multiTenantConnectionProvider,
-        MultiTenantIdentifierResolver multiTenantIdentifierResolver
+        MultiTenantSchemaConnectionProvider multiTenantSchemaConnectionProvider,
+        MultiTenantIdentifierResolver multiTenantSchemaIdentifierResolver
     ) {
         return hibernateProperties -> {
-            hibernateProperties.put(AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER, multiTenantConnectionProvider);
-            hibernateProperties.put(AvailableSettings.MULTI_TENANT_IDENTIFIER_RESOLVER, multiTenantIdentifierResolver);
+            hibernateProperties.put(
+                AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER, multiTenantSchemaConnectionProvider
+            );
+            hibernateProperties.put(
+                AvailableSettings.MULTI_TENANT_IDENTIFIER_RESOLVER, multiTenantSchemaIdentifierResolver
+            );
         };
     }
 }
