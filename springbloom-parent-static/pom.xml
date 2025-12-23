@@ -33,8 +33,8 @@
 
     <properties>
         <!-- NPM Default Environment. -->
-        <node.version>v20.15.0</node.version>
-        <npm.version>10.7.0</npm.version>
+        <node.version>v22.16.0</node.version>
+        <npm.version>10.9.2</npm.version>
 
         <npm.build-environment>build</npm.build-environment>
         <npm.dist-dir>dist</npm.dist-dir>
@@ -50,7 +50,7 @@
                 <plugin>
                     <groupId>com.github.eirslett</groupId>
                     <artifactId>frontend-maven-plugin</artifactId>
-                    <version>1.12.1</version>
+                    <version>1.15.1</version>
                     <executions>
                         <execution>
                             <id>install-node-and-npm</id>

@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.1</version>
+        <version>3.5.0</version>
         <relativePath/>
     </parent>
     <groupId>dev.springbloom</groupId>
@@ -82,15 +82,15 @@
     </repositories>
 
     <properties>
-        <revision>4.0.0.RC9</revision>
+        <revision>4.0.0.RC10</revision>
 
         <!-- Major versions. -->
         <springbloom.version>${revision}</springbloom.version>
-        <spring-boot.version>3.3.1</spring-boot.version>
+        <spring-boot.version>3.5.0</spring-boot.version>
 
         <!-- Basic configuration. -->
         <maven.build.timestamp.format>yyyyMMddHHmm</maven.build.timestamp.format>
-        <maven.version>3.8.8</maven.version>
+        <maven.version>3.9.0</maven.version>
         <java.version>21</java.version>
 
         <!--
@@ -128,7 +128,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.13.0</version>
+                    <version>3.14.0</version>
                     <configuration>
                         <forceLegacyJavacApi>true</forceLegacyJavacApi>
                         <parameters>true</parameters>
@@ -143,7 +143,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-release-plugin</artifactId>
-                    <version>3.1.0</version>
+                    <version>3.1.1</version>
                     <configuration>
                         <useReleaseProfile>false</useReleaseProfile>
                         <tagNameFormat>version/@{project.version}</tagNameFormat>
@@ -151,7 +151,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-deploy-plugin</artifactId>
-                    <version>3.1.2</version>
+                    <version>3.1.4</version>
                     <configuration>
                         <retryFailedDeploymentCount>7</retryFailedDeploymentCount>
                     </configuration>
@@ -302,7 +302,7 @@
             -->
             <plugin>
                 <artifactId>maven-help-plugin</artifactId>
-                <version>3.4.1</version>
+                <version>3.5.1</version>
                 <executions>
                     <execution>
                         <id>generate-effective-pom</id>
@@ -323,7 +323,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>3.6.1</version>
                 <executions>
                     <execution>
                         <id>attach-effective-pom</id>
@@ -351,7 +351,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.12</version>
+                <version>0.8.13</version>
                 <executions>
                     <execution>
                         <id>default-prepare-agent</id>
@@ -391,7 +391,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.6.0</version>
+                <version>1.7.0</version>
                 <executions>
                     <execution>
                         <id>flatten-pom</id>
