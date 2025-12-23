@@ -23,7 +23,6 @@ import jakarta.jms.Message;
 import lombok.Getter;
 
 import java.io.Serial;
-import java.io.Serializable;
 
 @Getter
 @SuppressWarnings("unused")
@@ -39,7 +38,7 @@ public class JmsApplicationException extends ApplicationException {
         this.failedMessage = failedMessage;
     }
 
-    public JmsApplicationException(Message failedMessage, String description, Serializable... args) {
+    public JmsApplicationException(Message failedMessage, String description, Object... args) {
         super(description, args);
         this.failedMessage = failedMessage;
     }
@@ -53,7 +52,7 @@ public class JmsApplicationException extends ApplicationException {
         Message failedMessage,
         String description,
         Throwable cause,
-        Serializable... args
+        Object... args
     ) {
         super(description, cause, args);
         this.failedMessage = failedMessage;

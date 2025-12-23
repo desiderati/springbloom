@@ -68,13 +68,13 @@ public class JmsAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(name = "jms.default-response-queue.name")
+    @ConditionalOnProperty("jms.default-response-queue.name")
     public Queue responseQueue(@Value("${jms.default-response-queue.name}") String responseQueueName) {
         return new ActiveMQQueue(responseQueueName);
     }
 
     @Bean
-    @ConditionalOnExpression("${jms.dlq.enabled:false} and !'${jms.default-response-queue.name}'.empty()")
+    @ConditionalOnExpression("${jms.dlq.enabled:false} and !'${jms.default-response-queue.name:}'.isEmpty()")
     public Queue responseDlqQueue(
         @Value("${jms.dlq.prefix}") String queueDlqPrefix,
         @Value("${jms.default-response-queue.name}") String responseQueueName
