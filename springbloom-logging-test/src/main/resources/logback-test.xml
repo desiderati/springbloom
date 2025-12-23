@@ -19,7 +19,7 @@
   -->
 <configuration debug="true">
     <conversionRule conversionWord="wEx"
-                    converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
+                    class="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
 
     <property name="CONSOLE_LOG_CHARSET" value="${CONSOLE_LOG_CHARSET:-utf-8}"/>
     <property name="CONSOLE_LOG_PATTERN"

@@ -18,7 +18,7 @@
   ~ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   -->
 <configuration>
-    <conversionRule conversionWord="mx" converterClass="dev.springbloom.logging.AwsMessageConverter"/>
+    <conversionRule conversionWord="mx" class="dev.springbloom.logging.AwsMessageConverter"/>
 
     <property name="CONSOLE_LOG_CHARSET" value="${CONSOLE_LOG_CHARSET:-utf-8}"/>
 
