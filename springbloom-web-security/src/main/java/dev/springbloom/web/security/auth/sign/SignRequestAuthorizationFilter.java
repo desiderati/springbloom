@@ -18,7 +18,7 @@
  */
 package dev.springbloom.web.security.auth.sign;
 
-import dev.springbloom.data.multitenant.MultiTenantContext;
+import dev.springbloom.data.multitenant.context.MultiTenantContextHolder;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -118,7 +118,7 @@ public class SignRequestAuthorizationFilter extends OncePerRequestFilter {
         try {
             filterChain.doFilter(signServletRequest, servletResponse);
         } finally {
-            MultiTenantContext.clear();
+            MultiTenantContextHolder.clearContext();
         }
     }
 }

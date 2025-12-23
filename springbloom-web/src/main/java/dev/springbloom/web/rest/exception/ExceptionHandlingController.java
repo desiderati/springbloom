@@ -27,12 +27,13 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.hibernate.exception.ConstraintViolationException;
 import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate;
@@ -72,12 +73,14 @@ import java.io.Serializable;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.*;
 
-@Slf4j
 @Validated
 @ConditionalOnWebApplication
 @ConditionalOnSingleCandidate(ExceptionHandlingController.class)
 @ControllerAdvice(annotations = {RestController.class, RepositoryRestController.class})
 public class ExceptionHandlingController extends ResponseEntityExceptionHandler implements MessageSourceAware {
+
+    private static final Logger logNotSafe =
+        LoggerFactory.getLogger(String.format("%sNotPrivacySafe", ExceptionHandlingController.class.getName()));
 
     private static final String STATUS_ATTR = "status";
 
@@ -162,7 +165,7 @@ public class ExceptionHandlingController extends ResponseEntityExceptionHandler 
             if (apiException.getCode() != 0 && apiException.getResponseBody() != null
                 && !apiException.getResponseHeaders().isEmpty()) {
 
-                log.debug("Transforming {} into {}", ex.getClass().getName(), ApiException.class.getName());
+                logNotSafe.debug("Transforming {} into {}", ex.getClass().getName(), ApiException.class.getName());
                 return handleApiException(request, apiException);
             }
         }
@@ -210,7 +213,7 @@ public class ExceptionHandlingController extends ResponseEntityExceptionHandler 
                 // As a fallback, we try to deserialize the response body into a map of objects.
                 responseErrorAttributes = deserializeApiResponseErrorAttributes(responseBody);
                 if (!appendResponseStr(remoteExceptionStr, responseErrorAttributes)) {
-                    log.warn("It is was not possible deserialize API using previous methods! " +
+                    logNotSafe.warn("It is was not possible deserialize API using previous methods! " +
                         "Appending response body directly as String...");
                     remoteExceptionStr.append(responseBody);
                 }
@@ -278,7 +281,7 @@ public class ExceptionHandlingController extends ResponseEntityExceptionHandler 
 
             return objectMapper.readValue(responseBody, typeRef);
         } catch (IOException ex) {
-            log.info("It is was not possible deserialize API exception body to response exception! " +
+            logNotSafe.info("It is was not possible deserialize API exception body to response exception! " +
                 "Message: {}", ex.getMessage());
             return null;
         }
@@ -296,7 +299,7 @@ public class ExceptionHandlingController extends ResponseEntityExceptionHandler 
 
             return objectMapper.readValue(responseBody, typeRef);
         } catch (IOException ex) {
-            log.info("It is was not possible deserialize API exception body to response error attributes! " +
+            logNotSafe.info("It is was not possible deserialize API exception body to response error attributes! " +
                 "Message: {}", ex.getMessage());
             return null;
         }
@@ -314,7 +317,7 @@ public class ExceptionHandlingController extends ResponseEntityExceptionHandler 
             remoteExceptionStr.append(prettyPrintedResponseBody);
             return true;
         } catch (IOException ex) {
-            log.info("It is was not possible append the response exception, neither the response error attributes! " +
+            logNotSafe.info("It is was not possible append the response exception, neither the response error attributes! " +
                 "Message: {}", ex.getMessage());
             return false;
         }
@@ -554,11 +557,11 @@ public class ExceptionHandlingController extends ResponseEntityExceptionHandler 
         if (shouldLogAsWarning(ex, errorMessage)) {
             String msg = "Requested URL: " + request.getRequestURL()
                 + System.lineSeparator() + "\tWarn UUID: " + uuid + " | " + errorMessage;
-            log.warn(msg, ex);
+            logNotSafe.warn(msg, ex);
         } else {
             String msg = "Requested URL: " + request.getRequestURL()
                 + System.lineSeparator() + "\tError UUID: " + uuid + " | " + errorMessage;
-            log.error(msg, ex);
+            logNotSafe.error(msg, ex);
         }
         return uuid;
     }
@@ -601,7 +604,7 @@ public class ExceptionHandlingController extends ResponseEntityExceptionHandler 
 
     private UUID logWarnMessage(HttpServletRequest request, String errorMessage) {
         UUID uuid = UUID.randomUUID();
-        log.warn("Requested URL: {}{}\tWarn UUID: {} | {}",
+        logNotSafe.warn("Requested URL: {}{}\tWarn UUID: {} | {}",
             request.getRequestURL(),
             System.lineSeparator(),
             uuid,
@@ -612,7 +615,7 @@ public class ExceptionHandlingController extends ResponseEntityExceptionHandler 
 
     private UUID logWarnMessage(WebRequest request, String errorMessage) {
         UUID uuid = UUID.randomUUID();
-        log.warn("Requested URL: {}{}\tWarn UUID: {} | {}",
+        logNotSafe.warn("Requested URL: {}{}\tWarn UUID: {} | {}",
             ((ServletWebRequest) request).getRequest().getRequestURI(),
             System.lineSeparator(),
             uuid,
@@ -623,7 +626,7 @@ public class ExceptionHandlingController extends ResponseEntityExceptionHandler 
 
     private UUID logErrorMessage(WebRequest request, String errorMessage, Throwable ex) {
         UUID uuid = UUID.randomUUID();
-        log.error("Requested URL: {}{}\tError UUID: {} | {}",
+        logNotSafe.error("Requested URL: {}{}\tError UUID: {} | {}",
             ((ServletWebRequest) request).getRequest().getRequestURI(),
             System.lineSeparator(),
             uuid,

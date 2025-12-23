@@ -18,8 +18,8 @@
  */
 package dev.springbloom.web.security.auth.jwt.multitenant
 
-import dev.springbloom.data.multitenant.MultiTenantContext
-import dev.springbloom.data.multitenant.MultiTenantSupport
+import dev.springbloom.data.multitenant.context.MultiTenantContextHolder
+import dev.springbloom.data.multitenant.MultiTenantAware
 import org.springframework.core.convert.converter.Converter
 import org.springframework.security.authentication.AbstractAuthenticationToken
 import org.springframework.security.oauth2.jwt.Jwt
@@ -32,9 +32,15 @@ class MultiTenantJwtAuthenticationConverter(
 
     override fun convert(jwt: Jwt): AbstractAuthenticationToken {
         return jwtAuthenticationConverter.convert(jwt).let { token ->
-            val tenant = jwt.getClaimAsString(MultiTenantSupport.TENANT)
-            MultiTenantJwtAuthenticationToken(token as JwtAuthenticationToken, tenant).also { multiTenantToken ->
-                MultiTenantContext.set(multiTenantToken.getTenant())
+            val tenant = jwt.getClaimAsString(MultiTenantAware.TENANT)
+
+            if (tenant == null) {
+                // If null, use the default one!
+                token!!
+            } else {
+                MultiTenantJwtAuthenticationToken(token as JwtAuthenticationToken, tenant).also { multiTenantToken ->
+                    MultiTenantContextHolder.getContext().tenantId = multiTenantToken.getTenant()
+                }
             }
         }
     }

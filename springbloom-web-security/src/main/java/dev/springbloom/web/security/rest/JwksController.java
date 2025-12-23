@@ -16,19 +16,32 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.web.security.auth.jwt.multitenant
 
-import dev.springbloom.data.multitenant.MultiTenantAware
-import org.springframework.security.oauth2.jwt.Jwt
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
+package dev.springbloom.web.security.rest;
 
-class MultiTenantJwtAuthenticationToken internal constructor(
-    jwtAuthenticationToken: JwtAuthenticationToken,
-    private val tenant: String
-) : JwtAuthenticationToken(
-    jwtAuthenticationToken.principal as Jwt,
-    jwtAuthenticationToken.authorities,
-    jwtAuthenticationToken.name
-), MultiTenantAware {
-    override fun getTenant(): String = tenant
+import dev.springbloom.web.security.auth.jwt.JwtService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.Map;
+
+@Controller
+@ResponseBody
+@RequestMapping("/.well-known")
+@ConditionalOnProperty(name = "spring.web.security.jwt.authentication.enabled", havingValue = "true")
+public class JwksController {
+
+    private final JwtService jwtService;
+
+    public JwksController(JwtService jwtService) {
+        this.jwtService = jwtService;
+    }
+
+    @GetMapping("/jwks.json")
+    public Map<String, Object> getJwks() {
+        return jwtService.getPublicKeysAsJwks();
+    }
 }

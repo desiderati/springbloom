@@ -31,7 +31,7 @@ import org.thymeleaf.TemplateEngine;
  */
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnProperty(value = "spring.graphql.voyager.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "spring.graphql.voyager.enabled", havingValue = "true")
 @EnableConfigurationProperties(VoyagerConfigurationProperties.class)
 @PropertySource("classpath:application-springbloom-web-graphql-voyager.properties")
 public class VoyagerAutoConfiguration {

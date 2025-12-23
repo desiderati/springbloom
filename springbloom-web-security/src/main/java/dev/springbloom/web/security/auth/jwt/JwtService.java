@@ -18,7 +18,9 @@
  */
 package dev.springbloom.web.security.auth.jwt;
 
+import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
@@ -26,16 +28,21 @@ import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 
 import javax.crypto.SecretKey;
+import java.security.MessageDigest;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.Base64;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -59,6 +66,7 @@ public class JwtService {
         String jwtAudience,
         JwtKeys jwtKeys,
         Converter<Jwt, ?> jwtConverter,
+        Converter<Jwt, ?> multiTenantJwtConverter,
         JwtEncryptionMethod jwtEncryptionMethod,
         int expirationPeriod,
         boolean jwtAuthenticationDelegationEnabled
@@ -69,7 +77,12 @@ public class JwtService {
 
         assert jwtKeys != null;
         this.jwtKeys = jwtKeys;
-        this.jwtConverter = jwtConverter;
+
+        if (multiTenantJwtConverter != null) {
+            this.jwtConverter = multiTenantJwtConverter;
+        } else {
+            this.jwtConverter = jwtConverter;
+        }
 
         if (jwtEncryptionMethod == JwtEncryptionMethod.ASYMMETRIC) {
             RSAPublicKey publicKey = loadPublicKey();
@@ -77,7 +90,16 @@ public class JwtService {
                 // TODO Felipe Desiderati: Pegar os algoritmos da configuração do Resource Server.
                 .signatureAlgorithm(SignatureAlgorithm.RS512)
                 .build();
-            jwtDecoder.setJwtValidator(JwtValidators.createDefault());
+
+            if (StringUtils.isNotBlank(this.jwtAudience)) {
+                OAuth2TokenValidator<Jwt> audienceValidator = new JwtAudienceValidator(this.jwtAudience);
+                OAuth2TokenValidator<Jwt> issuerValidator = JwtValidators.createDefaultWithIssuer(this.jwtIssuer);
+                OAuth2TokenValidator<Jwt> withAudience =
+                    new DelegatingOAuth2TokenValidator<>(issuerValidator, audienceValidator);
+                jwtDecoder.setJwtValidator(withAudience);
+            } else {
+                jwtDecoder.setJwtValidator(JwtValidators.createDefault());
+            }
 
             RSAPrivateKey privateKey = loadPrivateKey(jwtAuthenticationDelegationEnabled);
             if (privateKey != null) {
@@ -192,4 +214,41 @@ public class JwtService {
             throw new JwtException(failed.getMessage(), failed);
         }
     }
+
+    public Map<String, Object> getPublicKeysAsJwks() {
+        if (jwtEncryptionMethod != JwtEncryptionMethod.ASYMMETRIC) {
+            throw new IllegalStateException("JWKS is only available for asymmetric encryption methods!");
+        }
+
+        try {
+            RSAPublicKey publicKey = loadPublicKey();
+            RSAKey rsaKey = new RSAKey.Builder(publicKey)
+                .keyUse(KeyUse.SIGNATURE)
+                .algorithm(Algorithm.parse("RS512"))
+                .keyID(generateKeyId(publicKey))
+                .build();
+
+            JWKSet jwkSet = new JWKSet(rsaKey);
+            Map<String, Object> jwksMap = jwkSet.toJSONObject();
+            jwksMap.put("issuer", jwtIssuer);
+            return jwksMap;
+
+        } catch (Exception e) {
+            throw new JwtException("Unable to generate JWKS!", e);
+        }
+    }
+
+    private String generateKeyId(RSAPublicKey publicKey) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(publicKey.getEncoded());
+            String base64Hash = Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+            return "sb-" + base64Hash.substring(0, 8);
+
+        } catch (Exception e) {
+            log.warn("Unable to generate key ID from public key, using fallback...", e);
+            return "sb-default-" + System.currentTimeMillis();
+        }
+    }
+
 }

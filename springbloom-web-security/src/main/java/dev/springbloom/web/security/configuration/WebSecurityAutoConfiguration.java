@@ -18,12 +18,16 @@
  */
 package dev.springbloom.web.security.configuration;
 
+import dev.springbloom.data.multitenant.context.MultiTenantContextHolder;
 import dev.springbloom.web.UrlUtils;
 import dev.springbloom.web.configuration.WebAutoConfiguration;
 import dev.springbloom.web.security.*;
 import dev.springbloom.web.security.auth.jwt.JwtAuthenticationFilter;
+import dev.springbloom.web.security.auth.jwt.multitenant.MultiTenantJwtAuthenticationConverter;
+import dev.springbloom.web.security.auth.jwt.multitenant.MultiTenantJwtContextHolderFilter;
 import dev.springbloom.web.security.auth.sign.SignRequestAuthorizationFilter;
 import dev.springbloom.web.security.graphql.UserDataGraphQLArgumentResolver;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +54,8 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.task.DelegatingSecurityContextAsyncTaskExecutor;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
@@ -68,6 +74,7 @@ import org.springframework.web.accept.HeaderContentNegotiationStrategy;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.DispatcherServlet;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -75,6 +82,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
 
+import static dev.springbloom.data.multitenant.context.MultiTenantContextHolder.MODE_INHERITABLE_THREAD_LOCAL;
 import static org.springframework.security.config.Customizer.withDefaults;
 import static org.springframework.security.core.context.SecurityContextHolder.MODE_INHERITABLETHREADLOCAL;
 
@@ -88,6 +96,7 @@ import static org.springframework.security.core.context.SecurityContextHolder.MO
  * The configuration is highly customizable through application properties and
  * conditional beans.
  */
+@Slf4j
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @EnableWebSecurity
@@ -100,7 +109,9 @@ import static org.springframework.security.core.context.SecurityContextHolder.MO
 )
 @Import({
     WebAutoConfiguration.class,
-    JwtAuthenticationConfiguration.class
+    JwtAuthenticationConfiguration.class,
+    OAuth2AuthenticationConfiguration.class,
+    SignRequestAuthorizationFilter.class,
 }) // To be used with @WebMvcTest
 public class WebSecurityAutoConfiguration {
 
@@ -162,11 +173,31 @@ public class WebSecurityAutoConfiguration {
         }
     }
 
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(JwtAuthenticationConverter.class)
+    @ConditionalOnExpression(
+        """
+        !'${spring.datasource.multitenant.type}'.equalsIgnoreCase('NONE') and (
+            ${spring.web.security.jwt.authentication.enabled:false}
+                or ${spring.web.security.jwt.authorization.enabled:false}
+        )
+        """
+    )
+    public static class MultiTenantJwtConfiguration {
+
+        @Bean
+        public MultiTenantJwtAuthenticationConverter multiTenantJwtAuthenticationConverter(
+            JwtAuthenticationConverter jwtAuthenticationConverter
+        ) {
+            return new MultiTenantJwtAuthenticationConverter(jwtAuthenticationConverter);
+        }
+    }
+
     @Value("${spring.web.security.form-based.authentication.enabled:false}")
     private boolean formBasedAuthenticationEnabled;
 
     @Value("${spring.web.security.http-basic.authorization.enabled:false}")
-    private boolean httpBasicBasedAuthorizationEnabled;
+    private boolean httpBasicAuthorizationEnabled;
 
     @Value("${spring.web.security.jwt.authentication.enabled:false}")
     private boolean jwtAuthenticationEnabled;
@@ -219,11 +250,30 @@ public class WebSecurityAutoConfiguration {
         @Value("${spring.mvc.async.delegate-security-context:true}")
         boolean springMvcAsyncDelegateSecurityContext,
 
+        RequestMappingHandlerAdapter requestMappingHandlerAdapter,
         Collection<AuthorizationManagerBeforeMethodInterceptor> preAuthorizeInterceptors,
         Collection<AuthorizationManagerAfterMethodInterceptor> postAuthorizeInterceptors
     ) {
         if (springMvcAsyncDelegateSecurityContext) {
             SecurityContextHolder.setStrategyName(MODE_INHERITABLETHREADLOCAL);
+            MultiTenantContextHolder.setStrategyName(MODE_INHERITABLE_THREAD_LOCAL);
+
+            // As we have defined a new SecurityContextHolderStrategy, we must reconfigure the argument resolvers.
+            if (requestMappingHandlerAdapter.getArgumentResolvers() != null) {
+                requestMappingHandlerAdapter.getArgumentResolvers().forEach(argumentResolver -> {
+                    if (argumentResolver instanceof AuthenticationPrincipalArgumentResolver authenticationPrincipalArgumentResolver) {
+                        authenticationPrincipalArgumentResolver.setSecurityContextHolderStrategy(
+                            SecurityContextHolder.getContextHolderStrategy()
+                        );
+                    }
+
+                    if (argumentResolver instanceof CurrentSecurityContextArgumentResolver currentSecurityContextArgumentResolver) {
+                        currentSecurityContextArgumentResolver.setSecurityContextHolderStrategy(
+                            SecurityContextHolder.getContextHolderStrategy()
+                        );
+                    }
+                });
+            }
 
             // As we have defined a new SecurityContextHolderStrategy, we must reconfigure
             // the method security interceptors and the argument resolvers.
@@ -298,17 +348,6 @@ public class WebSecurityAutoConfiguration {
         }
     }
 
-    // TODO Felipe Desiderati: Testar e validar estar parte!
-    //  @Bean
-    //  @ConditionalOnExpression(
-    //      "${app.database.multitenant.strategy} == 'schema' and ${spring.web.security.jwt.authentication.enabled}"
-    //  )
-    //  public JwtAuthenticationConverter jwtAuthenticationConverter() {
-    //      // O problema é que o parâmetro que seria passado para classe seria somente criado,
-    //      // caso este objeto não fosse criado.
-    //      return new MultiTenantJwtAuthenticationConverter(????);
-    //  }
-
     /**
      * Configures the application's security filter chain.
      * <p>
@@ -327,16 +366,33 @@ public class WebSecurityAutoConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(
         HttpSecurity httpSecurity,
-        ObjectProvider<OAuth2ClientProperties> oAuth2ClientProperties
+        ObjectProvider<OAuth2ClientProperties> oAuth2ClientProperties,
+        ObjectProvider<MultiTenantJwtAuthenticationConverter> multiTenantJwtAuthenticationConverterProvider
     ) throws Exception {
         // We don't need to enable CSRF support when using JWT Tokens.
         // And also because with it enabled, we will not be able to call our back-end from the front-end.
-        final boolean oauthAuthenticationEnabled = oAuth2ClientProperties.getIfAvailable() != null &&
+        final boolean oauth2AuthenticationEnabled = oAuth2ClientProperties.getIfAvailable() != null &&
             !oAuth2ClientProperties.getIfAvailable().getRegistration().isEmpty();
 
-        // TODO Felipe Desiderati: Será que não devo permitir determinadas combinações de autorizações???
+        if (!isValidConfiguration(oauth2AuthenticationEnabled)) {
+            throw new IllegalSecurityConfigurationException(
+                """
+                    Error with your security configuration!
+                    Possible configurations for an application are:
+                        * Form Based Authentication
+                        * Form Based Authentication + HTTP Basic Authorization
+                        * Form Based Authentication + OAuth2 Login Authentication
+                        * HTTP Basic Authorization
+                        * OAuth2 Login Authentication
+                        * Jwt (Self Contained) Authentication
+                        * Jwt (Self Contained) Authentication + Jwt Authorization (Using OAuth2 Resource Server)
+                        * Jwt Authorization (Using OAuth2 Resource Server)
+                        * Sign Request Authorization
+                    """
+            );
+        }
 
-        if (jwtAuthorizationEnabled || (!formBasedAuthenticationEnabled && !oauthAuthenticationEnabled)) {
+        if (jwtAuthorizationEnabled || (!formBasedAuthenticationEnabled && !oauth2AuthenticationEnabled)) {
             httpSecurity.csrf(AbstractHttpConfigurer::disable);
         } else {
             httpSecurity.csrf(csrf -> {
@@ -392,7 +448,7 @@ public class WebSecurityAutoConfiguration {
         // We do not wish to enable session. Only if default or oauth authentication is enabled.
         httpSecurity.sessionManagement(sessionManagement ->
             sessionManagement.sessionCreationPolicy(
-                formBasedAuthenticationEnabled || oauthAuthenticationEnabled ?
+                formBasedAuthenticationEnabled || oauth2AuthenticationEnabled ?
                     SessionCreationPolicy.IF_REQUIRED :
                     SessionCreationPolicy.STATELESS
             )
@@ -404,11 +460,11 @@ public class WebSecurityAutoConfiguration {
         // Configures the endpoints.
         httpSecurity.authorizeHttpRequests(authorizeHttpRequests -> {
             if (!formBasedAuthenticationEnabled
-                && !httpBasicBasedAuthorizationEnabled
+                && !httpBasicAuthorizationEnabled
                 && !jwtAuthenticationEnabled
                 && !jwtAuthorizationEnabled
                 && !signRequestAuthorizationEnabled
-                && !oauthAuthenticationEnabled
+                && !oauth2AuthenticationEnabled
             ) {
                 // If none configured, it uses the default behavior.
                 authorizeHttpRequests.anyRequest().permitAll();
@@ -482,7 +538,7 @@ public class WebSecurityAutoConfiguration {
                     authorizeHttpRequests.requestMatchers("/vendor/altair/**").permitAll();
                 }
 
-                if (oauthAuthenticationEnabled) {
+                if (oauth2AuthenticationEnabled) {
                     // We enable default OAuth2 paths.
                     authorizeHttpRequests
                         // TODO Felipe Desiderati: Permitir que seja customizado!
@@ -491,6 +547,8 @@ public class WebSecurityAutoConfiguration {
                 }
 
                 if (jwtAuthenticationEnabled) {
+                    authorizeHttpRequests.requestMatchers("/.well-known/jwks.json").permitAll();
+
                     // Login URL for JWT Authentication.
                     // When using form-based authentication, Spring Security defines a default login URL
                     // unless explicitly overridden.
@@ -509,18 +567,43 @@ public class WebSecurityAutoConfiguration {
             }
         });
 
-        if (oauthAuthenticationEnabled) {
+        if (oauth2AuthenticationEnabled) {
+            boolean isAuthorizationCode = false;
+            var clientRegistrations = oAuth2ClientProperties.getIfAvailable().getRegistration().entrySet();
+            for (var entry : clientRegistrations) {
+                if ("authorization_code".equalsIgnoreCase(entry.getValue().getAuthorizationGrantType())) {
+                    isAuthorizationCode = true;
+                    break;
+                }
+            }
+
             // We enable default OAuth2 paths.
-            // TODO Felipe Desiderati: Permitir que seja customizado!
-            //  Permitir que possamos escolher entre definir ou não a tela de login.
-            httpSecurity.oauth2Login(it ->
-                it.loginProcessingUrl("/oauth2/login/*").permitAll()
-            );
-            //httpSecurity.oauth2Client(withDefaults());
+            // TODO Felipe Desiderati: Validar se realmente precisamos colocar isso e permitir que seja customizado.
+            if (isAuthorizationCode) {
+                httpSecurity.oauth2Login(it ->
+                    it.loginProcessingUrl("/login/oauth2/code/*").permitAll()
+                );
+            }
+            httpSecurity.oauth2Client(withDefaults());
         }
 
         if (jwtAuthorizationEnabled) {
-            httpSecurity.oauth2ResourceServer(it -> it.jwt(withDefaults()));
+            MultiTenantJwtAuthenticationConverter multiTenantJwtAuthenticationConverter =
+                multiTenantJwtAuthenticationConverterProvider.getIfAvailable();
+
+            if (multiTenantJwtAuthenticationConverter != null) {
+                httpSecurity.oauth2ResourceServer(it -> it.jwt(
+                    jwtConfigurer -> jwtConfigurer.jwtAuthenticationConverter(
+                        multiTenantJwtAuthenticationConverter
+                    )
+                ));
+
+                httpSecurity.addFilterAfter(
+                    new MultiTenantJwtContextHolderFilter(), BearerTokenAuthenticationFilter.class
+                );
+            } else {
+                httpSecurity.oauth2ResourceServer(it -> it.jwt(withDefaults()));
+            }
         }
 
         if (formBasedAuthenticationEnabled) {
@@ -528,13 +611,44 @@ public class WebSecurityAutoConfiguration {
             httpSecurity.formLogin(withDefaults());
         }
 
-        if (httpBasicBasedAuthorizationEnabled) {
+        if (httpBasicAuthorizationEnabled) {
             httpSecurity.httpBasic(httpBasic ->
                 httpBasic.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
             );
         }
 
         return httpSecurity.build();
+    }
+
+    private boolean isValidConfiguration(boolean oauth2AuthenticationEnabled) {
+        // Count how many authentication/authorization mechanisms are enabled.
+        int enabledCount = 0;
+        if (oauth2AuthenticationEnabled) enabledCount++;
+        if (formBasedAuthenticationEnabled) enabledCount++;
+        if (httpBasicAuthorizationEnabled) enabledCount++;
+        if (jwtAuthenticationEnabled) enabledCount++;
+        if (jwtAuthorizationEnabled) enabledCount++;
+        if (signRequestAuthorizationEnabled) enabledCount++;
+
+        if (enabledCount == 0) {
+            // If no mechanisms are enabled, it's a valid configuration (no authentication configured).
+            return true;
+
+        } else if (enabledCount == 1) {
+            // Check for valid combinations (exactly 1 or 2 mechanisms enabled in specific combinations)
+            // Single mechanism configurations.
+            return true;
+
+        } else if (enabledCount == 2) {
+            // Valid two-mechanism combinations.
+            return (formBasedAuthenticationEnabled && httpBasicAuthorizationEnabled)
+                || (formBasedAuthenticationEnabled && oauth2AuthenticationEnabled)
+                || (jwtAuthenticationEnabled && jwtAuthorizationEnabled);
+
+        } else {
+            // More than 2 mechanisms enabled is always invalid!
+            return true;
+        }
     }
 
     /**

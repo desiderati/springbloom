@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 - Felipe Desiderati
+ * Copyright (c) 2024 - Felipe Desiderati
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
  * associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -16,34 +16,40 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.web.security.auth.jwt;
+package dev.springbloom.web.security.auth.jwt.multitenant;
 
-import dev.springbloom.web.security.auth.jwt.JwtAuthenticationDelegateProvider;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import dev.springbloom.data.multitenant.MultiTenantAware;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 
-/**
- * This class can be used when we define a {@link AuthenticationProvider} which is responsible for calling
- * another system responsible for the authentication.
- *
- * @see for details: {@link JwtAuthenticationDelegateProvider}
- */
-public class JwtAuthenticationToken extends UsernamePasswordAuthenticationToken {
+@Getter
+@Setter
+@SuppressWarnings("squid:S2160") // Override equals(..)
+public class MultiTenantJwtUser extends User implements MultiTenantAware {
 
-    public String authorizationHeader;
+    private String tenant;
 
-    public JwtAuthenticationToken(Object principal, Object credentials) {
-        super(principal, credentials);
+    public MultiTenantJwtUser(
+        String username,
+        String password,
+        Collection<? extends GrantedAuthority> authorities,
+        String tenant
+    ) {
+        super(username, password, authorities);
+        this.tenant = tenant;
     }
 
-    public JwtAuthenticationToken(
-        Object principal,
-        Object credentials,
-        Collection<? extends GrantedAuthority> authorities
-    ) {
-        super(principal, credentials, authorities);
+    public static MultiTenantJwtUser from(UserDetails userDetails, String tenant) {
+        return new MultiTenantJwtUser(
+            userDetails.getUsername(),
+            userDetails.getPassword(),
+            userDetails.getAuthorities(),
+            tenant
+        );
     }
 }

@@ -24,7 +24,6 @@ import dev.springbloom.web.rest.exception.ResponseExceptionDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
-import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -51,7 +50,6 @@ import java.util.List;
  * <p>
  * This controller advice applies to all RestController and RepositoryRestController classes.
  */
-@Slf4j
 @Validated
 @ConditionalOnWebApplication
 @ControllerAdvice(annotations = {RestController.class, RepositoryRestController.class})

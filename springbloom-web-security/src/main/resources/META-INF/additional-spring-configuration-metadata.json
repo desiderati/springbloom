@@ -23,14 +23,20 @@
       "defaultValue": true
     },
     {
-      "name": "spring.web.http.clients.decorate-with-auth-header",
-      "description": "When a default RESTful API client is initialized, request interceptors can be applied to automatically append the Authorization header with a JWT token. This mechanism is only enabled when JWT-based authentication is configured.",
+      "name": "spring.web.http.clients.decorate-with-jwt-token",
+      "description": "When a default RESTful API client is initialized, request interceptors can be applied to automatically append the Authorization header with the JWT Token. This mechanism is only enabled when JWT-based authentication is configured.",
       "type": "java.lang.Boolean",
       "defaultValue": false
     },
     {
-      "name": "spring.web.http.clients.decorate-with-sign-request-header",
-      "description": "When a default RESTful API client is initialized, request interceptors can be applied to automatically append the Sign Request header. This mechanism is only enabled when Sign Request authorization is configured.",
+      "name": "spring.web.http.clients.decorate-with-sign-request-token",
+      "description": "When a default RESTful API client is initialized, request interceptors can be applied to automatically append the Authorization header with the Sign Request Token. This mechanism is only enabled when Sign Request authorization is configured.",
+      "type": "java.lang.Boolean",
+      "defaultValue": false
+    },
+    {
+      "name": "spring.web.http.clients.decorate-with-oauth2-access-token",
+      "description": "When a default RESTful API client is initialized, request interceptors can be applied to automatically append the Authorization header with the OAuth2 Access Token. This mechanism is only enabled when OAuth2 Client authentication is configured.",
       "type": "java.lang.Boolean",
       "defaultValue": false
     },

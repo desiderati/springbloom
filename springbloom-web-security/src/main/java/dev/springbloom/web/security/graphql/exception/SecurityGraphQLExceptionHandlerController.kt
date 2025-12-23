@@ -21,8 +21,6 @@ package dev.springbloom.web.security.graphql.exception
 import dev.springbloom.web.graphql.exception.GraphQLExceptionHandlerController
 import graphql.GraphQLError
 import graphql.schema.DataFetchingEnvironment
-import graphql.util.LogKit
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
 import org.springframework.context.MessageSource
 import org.springframework.graphql.data.method.annotation.GraphQlExceptionHandler
@@ -34,7 +32,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice
 
 @Validated
 @ConditionalOnWebApplication
-@ConditionalOnClass(LogKit::class)
 @ControllerAdvice(annotations = [Controller::class])
 class SecurityGraphQLExceptionHandlerController(
     messageSource: MessageSource

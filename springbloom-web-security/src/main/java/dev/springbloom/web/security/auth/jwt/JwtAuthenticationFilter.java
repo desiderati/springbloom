@@ -18,9 +18,7 @@
  */
 package dev.springbloom.web.security.auth.jwt;
 
-import dev.springbloom.web.security.auth.jwt.JwtAuthenticationClaimsConfigurer;
 import dev.springbloom.web.security.configuration.WebSecurityAutoConfiguration;
-import dev.springbloom.web.security.auth.jwt.JwtService;
 import jakarta.servlet.Filter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,13 +29,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.authentication.AuthenticationConverter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.stereotype.Component;
 
 /**
@@ -69,11 +68,11 @@ public class JwtAuthenticationFilter extends AbstractAuthenticationProcessingFil
         @Value("${spring.web.security.jwt.authentication.base-path-login:/authenticate}") String loginUrl
     ) {
         // Indicates whether this filter should attempt to process a login request.
-        super(new AntPathRequestMatcher(loginUrl, "POST"));
+        super(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, loginUrl));
         setAuthenticationSuccessHandler((request, response, authentication) -> {
             String authorizationHeader = null;
-            if (authentication instanceof JwtAuthenticationToken) {
-                authorizationHeader = ((JwtAuthenticationToken) authentication).authorizationHeader;
+            if (authentication instanceof JwtAuthenticationDelegateToken) {
+                authorizationHeader = ((JwtAuthenticationDelegateToken) authentication).authorizationHeader;
             }
 
             if (authorizationHeader == null) {

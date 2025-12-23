@@ -18,7 +18,7 @@
  */
 package dev.springbloom.web.configuration;
 
-import dev.springbloom.data.jpa.configuration.JpaAutoConfiguration;
+import dev.springbloom.data.configuration.JpaAutoConfiguration;
 import dev.springbloom.web.UrlUtils;
 import dev.springbloom.web.configuration.async.AsyncWebConfiguration;
 import dev.springbloom.web.graphql.NameSchemaDirectiveWiring;

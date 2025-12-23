@@ -23,12 +23,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestTemplate;
 
@@ -52,11 +50,10 @@ import org.springframework.web.client.RestTemplate;
  * Optional properties for enabling additional HTTP client decoration:
  * <ul>
  *     <li>{@code spring.web.http.clients.enabled}</li>
- *     <li>{@code spring.web.http.clients.decorate-with-sign-request-header}</li>
+ *     <li>{@code spring.web.http.clients.decorate-with-sign-request-token}</li>
  * </ul>
  */
 @Configuration
-@ConditionalOnClass(JwtAuthenticationConverter.class)
 @ConditionalOnProperty({
     "spring.web.security.sign-request.client.id",
     "spring.web.security.sign-request.client.secret-key"
@@ -74,10 +71,13 @@ public class SignRequestClientConfiguration {
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-    @ConditionalOnProperty(value = {
-        "spring.web.http.clients.enabled",
-        "spring.web.http.clients.decorate-with-sign-request-header",
-    }, havingValue = "true")
+    @ConditionalOnProperty(
+        name = {
+            "spring.web.http.clients.enabled",
+            "spring.web.http.clients.decorate-with-sign-request-token",
+        },
+        havingValue = "true"
+    )
     public static class HttpClientsSecurityConfiguration {
 
         /**

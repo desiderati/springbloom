@@ -67,7 +67,7 @@ import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_SING
  * </ul>
  */
 @Slf4j
-@Configuration(proxyBeanMethods = false)
+@Configuration // We want singleton beans here!
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnProperty(name = "springdoc.enabled", havingValue = "true")
 @EnableConfigurationProperties(SpringDocProperties.class)
@@ -179,6 +179,7 @@ public class OpenApiConfiguration {
      * @return A configured {@link GroupedOpenApi} instance that defines which endpoints are included in the documentation
      */
     @Bean
+    @Scope(SCOPE_SINGLETON)
     public GroupedOpenApi groupedOpenApi() {
         // The group name should not be changed!
         GroupedOpenApi.Builder builder = GroupedOpenApi.builder().group("swagger-config");

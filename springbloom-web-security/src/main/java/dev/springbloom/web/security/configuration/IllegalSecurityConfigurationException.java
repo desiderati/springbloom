@@ -16,19 +16,13 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.web.security.auth.jwt.multitenant
+package dev.springbloom.web.security.configuration;
 
-import dev.springbloom.data.multitenant.MultiTenantAware
-import org.springframework.security.oauth2.jwt.Jwt
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
+import dev.springbloom.core.exception.ApplicationException;
 
-class MultiTenantJwtAuthenticationToken internal constructor(
-    jwtAuthenticationToken: JwtAuthenticationToken,
-    private val tenant: String
-) : JwtAuthenticationToken(
-    jwtAuthenticationToken.principal as Jwt,
-    jwtAuthenticationToken.authorities,
-    jwtAuthenticationToken.name
-), MultiTenantAware {
-    override fun getTenant(): String = tenant
+public class IllegalSecurityConfigurationException extends ApplicationException {
+
+    public IllegalSecurityConfigurationException(String message) {
+        super(message);
+    }
 }

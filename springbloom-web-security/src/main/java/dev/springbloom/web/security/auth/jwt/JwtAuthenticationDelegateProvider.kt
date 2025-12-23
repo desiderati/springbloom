@@ -19,6 +19,9 @@
 
 package dev.springbloom.web.security.auth.jwt
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import dev.springbloom.web.security.auth.jwt.multitenant.MultiTenantJwtAuthenticationToken
+import dev.springbloom.web.security.auth.jwt.multitenant.MultiTenantJwtUser
 import lombok.extern.slf4j.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
@@ -30,10 +33,9 @@ import org.springframework.security.authentication.dao.AbstractUserDetailsAuthen
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.SPRING_SECURITY_FORM_PASSWORD_KEY
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.SPRING_SECURITY_FORM_USERNAME_KEY
-import org.springframework.util.LinkedMultiValueMap
-import org.springframework.util.MultiValueMap
 import org.springframework.web.client.RestClient
 
 /**
@@ -43,7 +45,7 @@ import org.springframework.web.client.RestClient
 @Slf4j
 class JwtAuthenticationDelegateProvider(
     private val jwtAuthenticationDelegateRestClient: RestClient,
-    private val jwtDelegateAuthenticationBasePathLogin: String
+    private val jwtAuthenticationDelegateBasePathLogin: String
 ) : AbstractUserDetailsAuthenticationProvider() {
 
     private lateinit var jwtService: JwtService
@@ -68,22 +70,22 @@ class JwtAuthenticationDelegateProvider(
         // Do nothing!!!
     }
 
-    override fun retrieveUser(username: String, authentication: UsernamePasswordAuthenticationToken): UserDetails {
-        val requestBody: MultiValueMap<String, String> =
-            LinkedMultiValueMap<String, String>().apply {
-                add(SPRING_SECURITY_FORM_USERNAME_KEY, authentication.principal as String?)
-                add(SPRING_SECURITY_FORM_PASSWORD_KEY, authentication.credentials as String?)
+    override fun retrieveUser(username: String, authentication: UsernamePasswordAuthenticationToken): UserDetails? {
+        val requestBody: Map<String, String> =
+            HashMap<String, String>().apply {
+                put(SPRING_SECURITY_FORM_USERNAME_KEY, authentication.principal as String)
+                put(SPRING_SECURITY_FORM_PASSWORD_KEY, authentication.credentials as String)
             }
 
-        if (authentication !is JwtAuthenticationToken) throw IllegalArgumentException(
-            "Authentication object should be an instance of JwtAuthenticationToken class!"
+        if (authentication !is JwtAuthenticationDelegateToken) throw IllegalArgumentException(
+            "Authentication object should be an instance of JwtAuthenticationDelegateToken class!"
         )
 
         try {
             return jwtAuthenticationDelegateRestClient.post()
-                .uri(jwtDelegateAuthenticationBasePathLogin)
+                .uri(jwtAuthenticationDelegateBasePathLogin)
                 .accept(MediaType.APPLICATION_JSON)
-                .body(requestBody)
+                .body(ObjectMapper().writeValueAsString(requestBody))
                 .exchange { _, response ->
                     when (response.statusCode) {
                         HttpStatus.OK -> {
@@ -100,13 +102,22 @@ class JwtAuthenticationDelegateProvider(
                                 )
 
                             val delegateAuthentication =
-                                jwtService.extractFromToken<org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken>(jwtToken)
+                                jwtService.extractFromToken<JwtAuthenticationToken>(jwtToken)
 
-                            User(
-                                requestBody.getFirst(SPRING_SECURITY_FORM_USERNAME_KEY),
-                                requestBody.getFirst(SPRING_SECURITY_FORM_PASSWORD_KEY),
-                                delegateAuthentication?.authorities ?: emptyList()
-                            )
+                            if (delegateAuthentication is MultiTenantJwtAuthenticationToken) {
+                                MultiTenantJwtUser(
+                                    requestBody[SPRING_SECURITY_FORM_USERNAME_KEY],
+                                    requestBody[SPRING_SECURITY_FORM_PASSWORD_KEY],
+                                    delegateAuthentication.authorities ?: emptyList(),
+                                    delegateAuthentication.getTenant()
+                                )
+                            } else {
+                                User(
+                                    requestBody[SPRING_SECURITY_FORM_USERNAME_KEY],
+                                    requestBody[SPRING_SECURITY_FORM_PASSWORD_KEY],
+                                    delegateAuthentication?.authorities ?: emptyList()
+                                )
+                            }
                         }
 
                         HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN -> throw BadCredentialsException(
@@ -131,13 +142,13 @@ class JwtAuthenticationDelegateProvider(
         authentication: Authentication,
         user: UserDetails
     ): Authentication {
-        if (authentication !is JwtAuthenticationToken) throw IllegalArgumentException(
-            "Authentication object should be an instance of JwtDelegateAuthenticationToken class!"
+        if (authentication !is JwtAuthenticationDelegateToken) throw IllegalArgumentException(
+            "Authentication object should be an instance of JwtAuthenticationDelegateToken class!"
         )
 
         // We need to create a new Authentication object, because this one will contain the authorities.
         super.createSuccessAuthentication(principal, authentication, user).let {
-            return JwtAuthenticationToken(
+            return JwtAuthenticationDelegateToken(
                 it.principal,
                 it.credentials,
                 it.authorities

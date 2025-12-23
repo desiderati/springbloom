@@ -31,7 +31,7 @@ import org.thymeleaf.TemplateEngine;
  */
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnProperty(value = "spring.graphql.altair.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "spring.graphql.altair.enabled", havingValue = "true")
 @EnableConfigurationProperties({
     AltairConfigurationProperties.class,
     AltairConfigurationPropertiesOptions.class,

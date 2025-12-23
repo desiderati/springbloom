@@ -18,10 +18,12 @@
  */
 package dev.springbloom.web.security.configuration;
 
-import dev.springbloom.data.multitenant.MultiTenantSupport;
+import dev.springbloom.data.multitenant.MultiTenantAware;
 import dev.springbloom.web.UrlUtils;
 import dev.springbloom.web.configuration.CorsProperties;
 import dev.springbloom.web.security.auth.jwt.*;
+import dev.springbloom.web.security.auth.jwt.multitenant.InMemoryMultiTenantJwtUserDetailsManager;
+import dev.springbloom.web.security.auth.jwt.multitenant.MultiTenantJwtAuthenticationConverter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,16 +33,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.autoconfigure.condition.*;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.lang.NonNull;
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
@@ -56,7 +54,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AbstractOAuth2Token;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.authentication.AuthenticationConverter;
 import org.springframework.validation.annotation.Validated;
@@ -79,7 +78,7 @@ import java.util.stream.Collectors;
  * for token generation, validation, and security context management.
  */
 @Configuration
-@ConditionalOnClass(JwtClaimsSet.class)
+@ConditionalOnClass(Jwt.class)
 @ConditionalOnProperty(name = "spring.web.security.jwt.authentication.enabled", havingValue = "true")
 public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
 
@@ -100,6 +99,32 @@ public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
         private static final Log logger = LogFactory.getLog(InMemoryUserDetailsConfiguration.class);
 
         @Bean
+        @ConditionalOnProperty("spring.security.user.default-tenant")
+        public InMemoryMultiTenantJwtUserDetailsManager inMemoryMultiTenantJwtUserDetailsManager(
+            @Value("${spring.security.user.default-tenant}") String defaultTenant,
+            SecurityProperties properties,
+            ObjectProvider<PasswordEncoder> passwordEncoder
+        ) {
+            SecurityProperties.User user = properties.getUser();
+            List<String> roles = user.getRoles();
+
+            UserDetails userDetails = User.withUsername(user.getName())
+                .password(getOrDeducePassword(user, passwordEncoder.getIfAvailable()))
+                .roles(org.springframework.util.StringUtils.toStringArray(roles))
+                .build();
+
+            return new InMemoryMultiTenantJwtUserDetailsManager(defaultTenant, userDetails);
+        }
+
+        /**
+         * We need to redefine this {@link UserDetailsService} because if we enable authentication along
+         * with authorization, the default object defined by Spring Boot will not be created, as there will
+         * already be an object of type {@link NimbusJwtDecoder} in the classpath.
+         *
+         * @see org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+         */
+        @Bean
+        @ConditionalOnExpression("'${spring.security.user.default-tenant:}'.isEmpty()")
         public InMemoryUserDetailsManager inMemoryUserDetailsManager(
             SecurityProperties properties,
             ObjectProvider<PasswordEncoder> passwordEncoder
@@ -141,11 +166,14 @@ public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-    @ConditionalOnProperty(value = {
-        "spring.web.security.jwt.authentication.enabled",
-        "spring.web.http.clients.enabled",
-        "spring.web.http.clients.decorate-with-auth-header",
-    }, havingValue = "true")
+    @ConditionalOnProperty(
+        name = {
+            "spring.web.security.jwt.authentication.enabled",
+            "spring.web.http.clients.enabled",
+            "spring.web.http.clients.decorate-with-jwt-token",
+        },
+        havingValue = "true"
+    )
     public static class HttpClientsSecurityConfiguration {
 
         /**
@@ -204,10 +232,10 @@ public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
     private String jwtAuthenticationAuthoritiesParameter;
 
     @Value("${spring.web.security.jwt.authentication.delegation.base-path-url:}")
-    private String jwtDelegateAuthenticationBasePathUrl;
+    private String jwtAuthenticationDelegateBasePathUrl;
 
     @Value("${spring.web.security.jwt.authentication.delegation.base-path-login:/authenticate}")
-    private String jwtDelegateAuthenticationBasePathLogin;
+    private String jwtAuthenticationDelegateBasePathLogin;
 
     private CorsProperties webSecurityCorsProperties;
 
@@ -237,7 +265,7 @@ public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
      * It supports different encryption methods and configurable expiration periods.
      *
      * @param jwtKeys                            The JWT keys for signing and verification
-     * @param jwtConverter                       The converter for JWT authentication
+     * @param jwtAuthenticationConverter         The converter for JWT authentication
      * @param jwtEncryptionMethod                The encryption method to use (default: asymmetric)
      * @param jwtExpirationPeriod                The token expiration period in days (default: 1)
      * @param jwtAuthenticationDelegationEnabled Whether JWT authentication delegation is enabled
@@ -245,7 +273,7 @@ public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
     @Bean
     @ConditionalOnMissingBean(JwtService.class)
     public JwtService jwtService(
-        @Value("${spring.web.security.jwt.authentication.issuer:https://springbloom.dev/issuer}")
+        @Value("${spring.web.security.jwt.authentication.issuer:https://springbloom.dev}")
         String jwtIssuer,
 
         @Value("${spring.web.security.jwt.authentication.audience:}")
@@ -255,8 +283,10 @@ public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
         JwtKeys jwtKeys,
 
         @Autowired(required = false)
-        @Qualifier("getJwtAuthenticationConverter")
-        Converter<Jwt, ?> jwtConverter,
+        JwtAuthenticationConverter jwtAuthenticationConverter,
+
+        @Autowired(required = false)
+        MultiTenantJwtAuthenticationConverter multiTenantJwtAuthenticationConverter,
 
         @Value("${spring.web.security.jwt.authentication.encryption-method:asymmetric}")
         JwtEncryptionMethod jwtEncryptionMethod,
@@ -271,7 +301,8 @@ public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
             jwtIssuer,
             jwtAudience,
             jwtKeys,
-            jwtConverter,
+            jwtAuthenticationConverter,
+            multiTenantJwtAuthenticationConverter,
             jwtEncryptionMethod,
             jwtExpirationPeriod,
             jwtAuthenticationDelegationEnabled
@@ -294,12 +325,9 @@ public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
                         .map(GrantedAuthority::getAuthority).collect(Collectors.toList())
                 );
 
-            // TODO Felipe Desiderati: Atualmente com a implementação que existe, esta parte será sempre falso!
-            if (authentication instanceof MultiTenantSupport) {
-                jwtClaimsSetBuilder.claim(
-                    MultiTenantSupport.TENANT,
-                    ((MultiTenantSupport) authentication).getTenant()
-                );
+            // User (Principal) must have support to Multi-Tenant.
+            if (authentication.getPrincipal() instanceof MultiTenantAware multiTenantAware) {
+                jwtClaimsSetBuilder.claim(MultiTenantAware.TENANT, multiTenantAware.getTenant());
             }
 
             return jwtClaimsSetBuilder.build();
@@ -311,8 +339,8 @@ public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
      */
     @Bean
     @ConditionalOnMissingBean(AuthenticationConverter.class)
-    public AuthenticationConverter jwtAuthenticationConverter() {
-        return new JwtAuthenticationConverter();
+    public JwtAuthenticationExtractor jwtAuthenticationExtractor() {
+        return new JwtAuthenticationExtractor();
     }
 
     /**
@@ -330,14 +358,14 @@ public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
     @Bean
     @ConditionalOnMissingBean(JwtAuthenticationDelegateProvider.class)
     @ConditionalOnProperty(name = "spring.web.security.jwt.authentication.delegation.enabled", havingValue = "true")
-    public JwtAuthenticationDelegateProvider jwtDelegateAuthenticationProvider() {
-        if (StringUtils.isBlank(jwtDelegateAuthenticationBasePathUrl)) {
+    public JwtAuthenticationDelegateProvider jwtAuthenticationDelegateProvider() {
+        if (StringUtils.isBlank(jwtAuthenticationDelegateBasePathUrl)) {
             throw new IllegalStateException("Authentication delegate base path should be defined!");
         }
 
         return new JwtAuthenticationDelegateProvider(
-            RestClient.builder().baseUrl(jwtDelegateAuthenticationBasePathUrl).build(),
-            jwtDelegateAuthenticationBasePathLogin
+            RestClient.builder().baseUrl(jwtAuthenticationDelegateBasePathUrl).build(),
+            jwtAuthenticationDelegateBasePathLogin
         );
     }
 

@@ -16,32 +16,36 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package dev.springbloom.web.security.auth.sign;
+package dev.springbloom.web.security.auth.jwt;
 
-import dev.springbloom.data.multitenant.MultiTenantAware;
-import lombok.*;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 
-import java.util.*;
+import java.util.Collection;
 
 /**
- * Represents an authorized client for signing requests with multi-tenant support.
- * This class encapsulates information such as the client's unique identifier,
- * secret key used for signing requests, tenant information for multi-tenant setups,
- * associated roles, and any additional properties related to the client.
+ * This class can be used when we define a {@link AuthenticationProvider} which is responsible for calling
+ * another system responsible for the authentication.
+ *
+ * @see for details: {@link JwtAuthenticationDelegateProvider}
  */
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@ToString(onlyExplicitlyIncluded = true)
-public class SignRequestAuthorizationClient implements MultiTenantAware {
+public class JwtAuthenticationDelegateToken extends UsernamePasswordAuthenticationToken {
 
-    @ToString.Include
-    private UUID id;
+    /**
+     * We need to store the authorization header, which was sent by the delegated authentication provider.
+     */
+    public String authorizationHeader;
 
-    private String secretKey;
-    private String tenant;
-    private List<String> roles = new ArrayList<>();
-    private Map<String, Object> additionalProperties = new HashMap<>();
+    public JwtAuthenticationDelegateToken(Object principal, Object credentials) {
+        super(principal, credentials);
+    }
 
+    public JwtAuthenticationDelegateToken(
+        Object principal,
+        Object credentials,
+        Collection<? extends GrantedAuthority> authorities
+    ) {
+        super(principal, credentials, authorities);
+    }
 }

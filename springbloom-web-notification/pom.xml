@@ -31,11 +31,6 @@
     <artifactId>springbloom-web-notification</artifactId>
 
     <dependencies>
-        <dependency>
-            <groupId>dev.springbloom</groupId>
-            <artifactId>springbloom-web</artifactId>
-        </dependency>
-
         <!-- Jakarta -->
         <dependency>
             <groupId>jakarta.servlet</groupId>

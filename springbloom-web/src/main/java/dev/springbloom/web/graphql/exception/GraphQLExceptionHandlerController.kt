@@ -18,37 +18,41 @@
  */
 package dev.springbloom.web.graphql.exception
 
+import dev.springbloom.core.exception.ApplicationException
+import dev.springbloom.core.validation.TypedValidationException
 import graphql.GraphQLError
 import graphql.GraphqlErrorBuilder
 import graphql.execution.DataFetcherExceptionHandlerParameters
 import graphql.schema.DataFetchingEnvironment
-import graphql.util.LogKit
-import dev.springbloom.core.exception.ApplicationException
-import dev.springbloom.core.validation.TypedValidationException
+import org.hibernate.exception.ConstraintViolationException
 import org.slf4j.Logger
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
+import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
 import org.springframework.context.MessageSource
 import org.springframework.context.i18n.LocaleContextHolder
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.graphql.data.method.annotation.GraphQlExceptionHandler
 import org.springframework.graphql.execution.ErrorType
 import org.springframework.stereotype.Controller
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.ControllerAdvice
-import java.io.Serializable
 import java.lang.reflect.UndeclaredThrowableException
 import java.util.*
+
+private const val DEFAULT_CONSTRAINT_VIOLATION_ERROR_MESSAGE = "constraint_violation_exception"
 
 @Validated
 @ConditionalOnWebApplication
 @ConditionalOnSingleCandidate(GraphQLExceptionHandlerController::class)
-@ConditionalOnClass(LogKit::class)
 @ControllerAdvice(annotations = [Controller::class])
 class GraphQLExceptionHandlerController(private val messageSource: MessageSource) {
 
     companion object {
-        private val logNotSafe: Logger = LogKit.getNotPrivacySafeLogger(GraphQLExceptionHandlerController::class.java)
+        private val logNotSafe: Logger =
+            LoggerFactory.getLogger(
+                String.format("%sNotPrivacySafe", GraphQLExceptionHandlerController::class.java.getName())
+            )
 
         private const val DEFAULT_ERROR_CODE = "unexpected_condition_exception"
         private const val DEFAULT_ERROR_MESSAGE =
@@ -102,6 +106,31 @@ class GraphQLExceptionHandlerController(private val messageSource: MessageSource
             ErrorType.BAD_REQUEST,
             environment
         )
+    }
+
+    @GraphQlExceptionHandler(DataIntegrityViolationException::class)
+    fun handleDataIntegrityViolationException(
+        dataIntegrityViolationEx: DataIntegrityViolationException,
+        environment: DataFetchingEnvironment
+    ): GraphQLError {
+        val constraintViolationEx: ConstraintViolationException? =
+            getConstraintViolationException(dataIntegrityViolationEx.cause)
+
+        return if (constraintViolationEx != null) {
+            generateGraphQLError(
+                if (constraintViolationEx.cause != null) constraintViolationEx.cause!! else constraintViolationEx,
+                getConstraintViolationErrorMessage(constraintViolationEx),
+                ErrorType.BAD_REQUEST,
+                environment
+            )
+        } else {
+            generateGraphQLError(
+                if (dataIntegrityViolationEx.cause != null) dataIntegrityViolationEx.cause!! else dataIntegrityViolationEx,
+                DEFAULT_CONSTRAINT_VIOLATION_ERROR_MESSAGE,
+                ErrorType.BAD_REQUEST,
+                environment
+            )
+        }
     }
 
     fun unwrapException(throwable: Throwable): Throwable =
@@ -181,7 +210,8 @@ class GraphQLExceptionHandlerController(private val messageSource: MessageSource
         val localizedErrorMessage = getMessage(
             LocaleContextHolder.getLocale(),
             errorMsg ?: DEFAULT_ERROR_CODE,
-            internalServerError
+            internalServerError,
+            if (throwable is ApplicationException) throwable.args else emptyArray()
         )
 
         logException(localizedErrorMessage, throwable)
@@ -195,12 +225,28 @@ class GraphQLExceptionHandlerController(private val messageSource: MessageSource
             .build()
     }
 
+    private fun getConstraintViolationException(throwable: Throwable?): ConstraintViolationException? {
+        return when (throwable) {
+            null -> null
+            is ConstraintViolationException -> throwable
+            else -> getConstraintViolationException(throwable.cause)
+        }
+    }
+
+    private fun getConstraintViolationErrorMessage(ex: ConstraintViolationException): String {
+        return when (ex.sqlState) {
+            "23502" -> "not_null_" + ex.constraintName + "_exception"
+            "23505" -> "unique_" + ex.constraintName + "_exception"
+            else -> DEFAULT_CONSTRAINT_VIOLATION_ERROR_MESSAGE
+        }
+    }
+
     @Suppress("SameParameterValue")
     private fun getMessage(
         locale: Locale,
         code: String,
         defaultMessage: String,
-        vararg args: Serializable
+        args: Array<Any>? = null
     ): String {
         return messageSource.getMessage(code, args, defaultMessage, locale)!!
     }

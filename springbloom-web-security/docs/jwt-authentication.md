@@ -67,7 +67,7 @@ The following properties can be configured in your `application.properties` or `
 # Defines the issuer of the JWT tokens used for authentication.
 # This value is included in the "iss" claim of each token and validated by the Resource Server.
 # Must match the expected issuer URI configured in the JwtDecoder to ensure token integrity and trust.
-spring.web.security.jwt.authentication.issuer=https://springbloom.dev/issuer
+spring.web.security.jwt.authentication.issuer=https://springbloom.dev
 
 # Defines the expected audience value in the JWT, separating multiple values by comma.
 # This value is included in the "aud" claim of each token and ensures the JWT token was issued for the right service.
@@ -75,13 +75,13 @@ spring.web.security.jwt.authentication.issuer=https://springbloom.dev/issuer
 #spring.web.security.jwt.authentication.audience=api.my-service.com
 
 # The RSA private key used for signing JWT tokens when using asymmetric encryption.
-spring.web.security.jwt.authentication.keys.public-key=classpath:jwt.pub
+#spring.web.security.jwt.authentication.keys.public-key=classpath:jwt.pub
 
 # The RSA private key used for signing JWT tokens when using asymmetric encryption.
-spring.web.security.jwt.authentication.keys.private-key=classpath:jwt.key
+#spring.web.security.jwt.authentication.keys.private-key=classpath:jwt.key
 
 # The secret key used for both signing and verifying JWT tokens when using symmetric encryption.
-spring.web.security.jwt.authentication.keys.secret-key=classpath:secret.key
+#spring.web.security.jwt.authentication.keys.secret-key=classpath:secret.key
 
 # Sets the URL that determines if authentication is required.
 spring.web.security.jwt.authentication.base-path-login=/authenticate

@@ -18,7 +18,7 @@
  */
 package dev.springbloom.web.configuration;
 
-import dev.springbloom.data.jpa.configuration.ConditionalOnJpa;
+import dev.springbloom.data.configuration.ConditionalOnJpa;
 import jakarta.servlet.Filter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
