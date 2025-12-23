@@ -1,5 +1,5 @@
 [![Build Status](https://github.com/desiderati/springbloom/workflows/Build/badge.svg)](https://github.com/desiderati/springbloom/actions)
-[![Version](https://img.shields.io/badge/Version-4.0.0.RC9-red.svg)](https://github.com/desiderati/springbloom/releases)
+[![Version](https://img.shields.io/badge/Version-4.0.0.RC10-red.svg)](https://github.com/desiderati/springbloom/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/desiderati/springbloom.svg?label=GitHub%20Stars)](https://github.com/desiderati/springbloom/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
