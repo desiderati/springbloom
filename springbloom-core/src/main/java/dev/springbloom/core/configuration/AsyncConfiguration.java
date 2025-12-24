@@ -19,10 +19,16 @@
 package dev.springbloom.core.configuration;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aop.interceptor.AsyncExecutionAspectSupport;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.aop.interceptor.SimpleAsyncUncaughtExceptionHandler;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -33,6 +39,31 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @ConditionalOnProperty(name = "spring.async.enabled", havingValue = "true")
 public class AsyncConfiguration implements AsyncConfigurer {
+
+    @Configuration(proxyBeanMethods = false)
+    public static class AsyncAliasTaskExecutorConfiguration {
+
+        /**
+         * Creates an alias for the "applicationTaskExecutor" bean with the name "taskExecutor".
+         * This is necessary because Spring's AnnotationAsyncExecutionInterceptor looks for a bean
+         * named "taskExecutor" by default when processing @Async annotations.
+         *
+         * @param applicationTaskExecutor The application's task executor bean
+         * @return The same task executor instance but with the name "taskExecutor"
+         */
+        @Bean(AsyncExecutionAspectSupport.DEFAULT_TASK_EXECUTOR_BEAN_NAME)
+        public AsyncTaskExecutor taskExecutor(
+            @Lazy @Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
+            AsyncTaskExecutor applicationTaskExecutor
+        ) {
+            log.info(
+                "Creating alias '{}' for the '{}' bean",
+                AsyncExecutionAspectSupport.DEFAULT_TASK_EXECUTOR_BEAN_NAME,
+                TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME
+            );
+            return applicationTaskExecutor;
+        }
+    }
 
     @Override
     public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {

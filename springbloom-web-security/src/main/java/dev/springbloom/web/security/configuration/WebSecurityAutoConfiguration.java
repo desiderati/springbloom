@@ -44,6 +44,7 @@ import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
 import org.springframework.security.authorization.method.AuthorizationManagerAfterMethodInterceptor;
 import org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor;
@@ -177,11 +178,11 @@ public class WebSecurityAutoConfiguration {
     @ConditionalOnClass(JwtAuthenticationConverter.class)
     @ConditionalOnExpression(
         """
-        !'${spring.datasource.multitenant.type}'.equalsIgnoreCase('NONE') and (
-            ${spring.web.security.jwt.authentication.enabled:false}
-                or ${spring.web.security.jwt.authorization.enabled:false}
-        )
-        """
+            !'${spring.datasource.multitenant.type}'.equalsIgnoreCase('NONE') and (
+                ${spring.web.security.jwt.authentication.enabled:false}
+                    or ${spring.web.security.jwt.authorization.enabled:false}
+            )
+            """
     )
     public static class MultiTenantJwtConfiguration {
 
@@ -729,8 +730,22 @@ public class WebSecurityAutoConfiguration {
     @ConditionalOnProperty(name = "spring.mvc.async.delegate-security-context", havingValue = "true")
     @ConditionalOnClass({DispatcherServlet.class, DefaultAuthenticationEventPublisher.class})
     public Executor delegatingSecurityContextAsyncTaskExecutor(
-        @Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME) AsyncTaskExecutor taskExecutor
+        @Lazy @Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME) AsyncTaskExecutor taskExecutor
     ) {
         return new DelegatingSecurityContextAsyncTaskExecutor(taskExecutor);
+    }
+
+    /**
+     * Creates a custom method security expression handler.
+     * This handler is used for evaluating security expressions in method annotations.
+     * It supports custom expressions for checking administrator privileges.
+     */
+    @Bean
+    @ConditionalOnProperty(name = "spring.web.security.jwt.authorization.enabled", havingValue = "true")
+    static public MethodSecurityExpressionHandler customMethodSecurityExpressionHandler(
+        @Value("${spring.web.security.jwt.authorization.authority.administrator:administrator}")
+        String administratorAuthority
+    ) {
+        return new CustomMethodSecurityExpressionHandler(administratorAuthority);
     }
 }

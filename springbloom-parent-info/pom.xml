@@ -82,7 +82,7 @@
     </repositories>
 
     <properties>
-        <revision>4.0.0.RC10</revision>
+        <revision>4.0.0.RC11</revision>
 
         <!-- Major versions. -->
         <springbloom.version>${revision}</springbloom.version>

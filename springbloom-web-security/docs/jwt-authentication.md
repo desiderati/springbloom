@@ -95,10 +95,6 @@ spring.web.security.jwt.authentication.encryption-method=asymmetric
 # It defines the parameter name that will be used to extract the authorities for the JWT Token.
 spring.web.security.jwt.authentication.authorities.parameter=authorities
 
-# It defines the parameter name that will be used to extract the information
-# if a JWT Token was generated for an administrator user.
-spring.web.security.jwt.authentication.authorities.parameter-administrator=administrator
-
 # Set the HTTP methods to allow, e.g., GET, POST, etc. The special value '*' allows all methods.
 spring.web.security.jwt.authentication.cors.allowed-methods=POST
 

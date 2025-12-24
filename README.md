@@ -1,5 +1,5 @@
 [![Build Status](https://github.com/desiderati/springbloom/workflows/Build/badge.svg)](https://github.com/desiderati/springbloom/actions)
-[![Version](https://img.shields.io/badge/Version-4.0.0.RC10-red.svg)](https://github.com/desiderati/springbloom/releases)
+[![Version](https://img.shields.io/badge/Version-4.0.0.RC11-red.svg)](https://github.com/desiderati/springbloom/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/desiderati/springbloom.svg?label=GitHub%20Stars)](https://github.com/desiderati/springbloom/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -49,7 +49,19 @@ Felipe Desiderati <felipedesiderati@springbloom.dev> (https://github.com/desider
 
 All project changes will be documented in this file.
 
-#### [4.0.0-RC10] - 2025-12-23
+#### [4.0.0.RC11] - 2025-12-23
+
+- Added support for thread context inheritance in DispatcherServlet with new configuration options:
+    * Created `DispatcherServletConfiguration` class that configures the servlet with `threadContextInheritable=true`
+      when enabled.
+    * Added new property `spring.mvc.dispatcher.thread-context-inheritable` (default: false) to control this behavior
+    * Updated configuration metadata with documentation and hints for the new property.
+- Enhanced async context propagation with better support for different propagation modes:
+    * Improved integration between Spring Security context and async task execution.
+    * Better documentation for async context propagation options.
+    * Simplified configuration for applications that need thread context inheritance.
+
+#### [4.0.0.RC10] - 2025-12-23
 
 - Refactor: Enhance validation error handling and standardize exception arguments. Introduced prefix support in
   `TypedValidationException` for better error traceability, updated `ensure` methods, replaced `Serializable` with
@@ -71,9 +83,9 @@ All project changes will be documented in this file.
 - Deleted outdated `OAuth2AuthenticationSuccessHandler`, `OAuth2UserService`, and associated references. Introduced
   `OAuth2UserController` for simplified user endpoints. Enhanced JWT configurations with multi-tenant support, audience
   validation, and JWKS management. Adjusted property names in configuration files for clarity and consistency. Upgraded
-  notification OpenAPI version to 4.0.0.RC10.
+  notification OpenAPI version to 4.0.0.RC11.
 
-#### [4.0.0-RC9] - 2025-08-01
+#### [4.0.0.RC9] - 2025-08-01
 
 - Reorganized security module structure for better organization and clarity:
     * Moved authentication-related classes to `dev.springbloom.web.security.auth` package

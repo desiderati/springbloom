@@ -41,7 +41,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.lang.NonNull;
-import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationManagerResolver;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -367,19 +366,6 @@ public class JwtAuthenticationConfiguration implements WebMvcConfigurer {
             RestClient.builder().baseUrl(jwtAuthenticationDelegateBasePathUrl).build(),
             jwtAuthenticationDelegateBasePathLogin
         );
-    }
-
-    /**
-     * Creates a custom method security expression handler.
-     * This handler is used for evaluating security expressions in method annotations.
-     * It supports custom expressions for checking administrator privileges.
-     */
-    @Bean
-    static public MethodSecurityExpressionHandler methodSecurityExpressionHandler(
-        @Value("${spring.web.security.jwt.authentication.authorities.parameter-administrator:administrator}")
-        String administratorAuthority
-    ) {
-        return new CustomMethodSecurityExpressionHandler(administratorAuthority);
     }
 
     /**

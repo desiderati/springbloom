@@ -75,8 +75,8 @@
       "defaultValue": "authorities"
     },
     {
-      "name": "spring.web.security.jwt.authentication.authorities.parameter-administrator",
-      "description": "It defines the parameter name that will be used to extract the information if a JWT Token was generated for an administrator user.",
+      "name": "spring.web.security.jwt.authorization.authority.administrator",
+      "description": "It defines the authority value that will be used to extract the information if a JWT Token was generated for an administrator user.",
       "type": "java.lang.String",
       "defaultValue": "administrator"
     },

@@ -47,7 +47,7 @@ class TypedValidationException(
 
     override fun toString(): String {
         val result =
-            if (prefix.isNotBlank()) StringBuilder().append(prefix).append(".") else StringBuilder()
+            if (prefix.isNotBlank()) StringBuilder().append(prefix).append(":") else StringBuilder()
 
         return result.append(message)
             .append(

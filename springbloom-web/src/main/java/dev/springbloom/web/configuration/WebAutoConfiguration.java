@@ -20,6 +20,7 @@ package dev.springbloom.web.configuration;
 
 import dev.springbloom.data.configuration.JpaAutoConfiguration;
 import dev.springbloom.web.UrlUtils;
+import dev.springbloom.web.configuration.async.AsyncContextPropagationMode;
 import dev.springbloom.web.configuration.async.AsyncWebConfiguration;
 import dev.springbloom.web.graphql.NameSchemaDirectiveWiring;
 import dev.springbloom.web.rest.exception.ResponseExceptionDTOHttpMessageConverter;
@@ -59,6 +60,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.validation.Validator;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -145,6 +147,20 @@ public class WebAutoConfiguration implements WebMvcRegistrations, WebMvcConfigur
         this.validator = validator;
         this.entityManager = entityManager.getIfAvailable();
         this.beanFactory = beanFactory;
+    }
+
+    @Autowired
+    public void configureDispatcherServlet(
+        @Value("${spring.mvc.async.context-propagation-mode:NON_INHERITABLE}")
+        AsyncContextPropagationMode springMvcAsyncContextPropagationMode,
+
+        @Lazy
+        DispatcherServlet dispatcherServlet
+    ) {
+        if (springMvcAsyncContextPropagationMode == AsyncContextPropagationMode.INHERITABLE) {
+            log.info("Configuring DispatcherServlet with threadContextInheritable=true");
+            dispatcherServlet.setThreadContextInheritable(true);
+        }
     }
 
     /**
